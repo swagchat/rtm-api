@@ -1,0 +1,5 @@
+package: github.com/fairway-corp/swagchat-realtime
+import:
+- package: github.com/gorilla/websocket
+  version: ^1.0.0
+- package: github.com/shogo82148/go-gracedown

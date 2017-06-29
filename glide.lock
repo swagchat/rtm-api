@@ -1,0 +1,22 @@
+hash: 880ebe42bc561eef3e6d461e9c3fe37c37967fe84614be8a0ec957f198a26475
+updated: 2017-03-19T03:13:54.18169436+09:00
+imports:
+- name: github.com/fukata/golang-stats-api-handler
+  version: 90f0b59102629831cc109845475a8d77043412ec
+- name: github.com/go-zoo/bone
+  version: fd0aebc74e908868b09ac140fb5a53cb363884c1
+- name: github.com/gorilla/websocket
+  version: 3ab3a8b8831546bd18fd182c20687ca853b2bb13
+- name: github.com/shogo82148/go-gracedown
+  version: c030b2477760b7d0826b55c430dd9fcf37f4ecaf
+- name: go.uber.org/atomic
+  version: 0c9e689d64f004564b79d9a663634756df322902
+- name: go.uber.org/zap
+  version: a03b90bc236f3def382f17743518889a31f8187c
+  subpackages:
+  - buffer
+  - internal/bufferpool
+  - internal/exit
+  - internal/multierror
+  - zapcore
+testImports: []
