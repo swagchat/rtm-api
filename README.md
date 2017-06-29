@@ -24,6 +24,22 @@ SwagChat is an open source chat components for your webapps.
 
 ![Architecture](https://client.fairway.ne.jp/swagchat/img/architecture-201703011307.png "Architecture")
 
+## Quick start
+
+Just run the executable binary.
+
+You can download binary from [Release page](https://github.com/fairway-corp/swagchat-realtime/releases)
+
+```
+# In the case of macOS (Default port is 9200)
+./swagchat-realtime_darwin_amd64
+
+
+# You can also specify the port
+./swagchat-realtime_darwin_amd64 -port 9300
+```
+
+Not For Production Use!
 
 ## License
 
