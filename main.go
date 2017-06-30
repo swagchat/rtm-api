@@ -12,7 +12,7 @@ import (
 	"github.com/fairway-corp/swagchat-realtime/services"
 )
 
-var port = flag.String("port", "9200", "service port")
+var port = flag.String("port", "9100", "service port")
 
 func main() {
 	flag.Parse()

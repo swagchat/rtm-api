@@ -31,12 +31,12 @@ Just run the executable binary.
 You can download binary from [Release page](https://github.com/fairway-corp/swagchat-realtime/releases)
 
 ```
-# In the case of macOS (Default port is 9200)
+# In the case of macOS (Default port is 9100)
 ./swagchat-realtime_darwin_amd64
 
 
 # You can also specify the port
-./swagchat-realtime_darwin_amd64 -port 9300
+./swagchat-realtime_darwin_amd64 -port 9200
 ```
 
 Not For Production Use!
