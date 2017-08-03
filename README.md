@@ -46,6 +46,8 @@ docker pull swagchat/realtime
 docker run swagchat/realtime
 ```
 
+[Docker repository](https://hub.docker.com/r/swagchat/realtime/)
+
 ## License
 
 MIT License.
