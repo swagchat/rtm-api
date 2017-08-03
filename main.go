@@ -24,7 +24,7 @@ func main() {
 	log.SetFlags(log.Llongfile)
 
 	flag.StringVar(&port, "port", "9100", "service port")
-	flag.StringVar(&queHost, "queHost", "127.0.0.1", "Host name of nsqlookupd")
+	flag.StringVar(&queHost, "queHost", "", "Host name of nsqlookupd")
 	flag.StringVar(&quePort, "quePort", "4161", "Port no of nsqlookupd")
 	flag.StringVar(&queTopic, "queTopic", "websocket", "Topic name")
 	flag.StringVar(&queChannel, "queChannel", "", "Channel name. If it's not set, channel is hostname.")
