@@ -26,7 +26,7 @@ SwagChat is an open source chat components for your webapps.
 
 ## Quick start
 
-Just run the executable binary.
+### Just run the executable binary
 
 You can download binary from [Release page](https://github.com/fairway-corp/swagchat-realtime/releases)
 
@@ -39,7 +39,12 @@ You can download binary from [Release page](https://github.com/fairway-corp/swag
 ./swagchat-realtime_darwin_amd64 -port 9200
 ```
 
-Not For Production Use!
+### docker
+
+```
+docker pull swagchat/realtime
+docker run swagchat/realtime
+```
 
 ## License
 
