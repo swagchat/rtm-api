@@ -1,7 +1,3 @@
-// Copyright 2013 The Gorilla WebSocket Authors. All rights reserved.
-// Use of this source code is governed by a BSD-style
-// license that can be found in the LICENSE file.
-
 package services
 
 import (
@@ -30,7 +26,6 @@ var (
 	space   = []byte{' '}
 )
 
-// Conn is an middleman between the websocket connection and the hub.
 type Conn struct {
 	Ws      *websocket.Conn
 	Send    chan []byte
@@ -49,7 +44,6 @@ type RegisterData struct {
 	conn      *Conn
 }
 
-// readPump pumps messages from the websocket connection to the hub.
 func (c *Conn) ReadPump() {
 	defer func() {
 		//Manager.Unregister <- registerData
@@ -66,7 +60,7 @@ func (c *Conn) ReadPump() {
 			if websocket.IsUnexpectedCloseError(err, websocket.CloseGoingAway) {
 				log.Printf("error: %v", err)
 				c.Ws.Close()
-				Manager.Close <- c
+				Srv.Close <- c
 			}
 			break
 		}
@@ -80,20 +74,18 @@ func (c *Conn) ReadPump() {
 		}
 		switch socketData.Action {
 		case "bind":
-			Manager.Register <- registerData
+			Srv.Register <- registerData
 		case "unbind":
-			Manager.Unregister <- registerData
+			Srv.Unregister <- registerData
 		}
 	}
 }
 
-// write writes a message with the given message type and payload.
 func (c *Conn) write(mt int, payload []byte) error {
 	c.Ws.SetWriteDeadline(time.Now().Add(writeWait))
 	return c.Ws.WriteMessage(mt, payload)
 }
 
-// writePump pumps messages from the hub to the websocket connection.
 func (c *Conn) WritePump() {
 	ticker := time.NewTicker(pingPeriod)
 	defer func() {
@@ -106,7 +98,6 @@ func (c *Conn) WritePump() {
 		case message, ok := <-c.Send:
 			log.Println("<-c.Send", ok)
 			if !ok {
-				// The hub closed the channel.
 				c.write(websocket.CloseMessage, []byte{})
 				return
 			}
@@ -118,7 +109,6 @@ func (c *Conn) WritePump() {
 			}
 			w.Write(message)
 
-			// Add queued chat messages to the current websocket message.
 			n := len(c.Send)
 			for i := 0; i < n; i++ {
 				w.Write(newline)
