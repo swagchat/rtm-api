@@ -14,9 +14,18 @@
 			"Rev": "11ae278a93c8268a0f98758aa915def5dfca3254"
 		},
 		{
+			"ImportPath": "github.com/golang/snappy",
+			"Rev": "553a641470496b2327abcac10b36396bd98e45c9"
+		},
+		{
 			"ImportPath": "github.com/gorilla/websocket",
 			"Comment": "v1.2.0-6-ga69d9f6",
 			"Rev": "a69d9f6de432e2c6b296a947d8a5ee88f68522cf"
+		},
+		{
+			"ImportPath": "github.com/nsqio/go-nsq",
+			"Comment": "v1.0.6-12-gb2d0b44",
+			"Rev": "b2d0b4429f2082bc44babe089418d8da16d71e8a"
 		},
 		{
 			"ImportPath": "github.com/shogo82148/go-gracedown",
