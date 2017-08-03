@@ -7,9 +7,7 @@ import (
 	"github.com/fairway-corp/swagchat-realtime/models"
 )
 
-// hub maintains the set of active connections and broadcasts messages to the
-// connections.
-type Hub struct {
+type Server struct {
 	connections map[*Conn]bool
 	rooms       map[string]RoomConnections
 	Broadcast   chan []byte
@@ -18,7 +16,7 @@ type Hub struct {
 	Close       chan *Conn
 }
 
-var Manager = Hub{
+var Srv = Server{
 	connections: make(map[*Conn]bool),
 	rooms:       make(map[string]RoomConnections),
 	Broadcast:   make(chan []byte),
@@ -35,7 +33,7 @@ type EventConnections struct {
 	connections map[*Conn]bool
 }
 
-func (h *Hub) Run() {
+func (h *Server) Run() {
 	for {
 		select {
 		case registerData := <-h.Register:
@@ -103,14 +101,14 @@ func (h *Hub) Run() {
 				case conn.Send <- newMessage:
 				default:
 					close(conn.Send)
-					delete(Manager.connections, conn)
+					delete(Srv.connections, conn)
 				}
 			}
 		}
 	}
 }
 
-func (h *Hub) connectionInfo(registerData *RegisterData) {
+func (h *Server) connectionInfo(registerData *RegisterData) {
 	log.Println("----------- connection info start ------------------------------------------")
 	log.Println("-  conn", registerData.conn)
 	log.Println("-  connections count", len(h.connections))

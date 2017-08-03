@@ -1,9 +1,6 @@
 package handlers
 
 import (
-	"bytes"
-	"encoding/base64"
-	"encoding/json"
 	"io/ioutil"
 	"log"
 	"net"
@@ -13,7 +10,7 @@ import (
 	"strings"
 	"syscall"
 
-	"github.com/fairway-corp/swagchat-realtime/models"
+	"github.com/fairway-corp/swagchat-realtime/messaging"
 	"github.com/fairway-corp/swagchat-realtime/services"
 	"github.com/fairway-corp/swagchat-realtime/utils"
 	"github.com/fukata/golang-stats-api-handler"
@@ -22,7 +19,9 @@ import (
 	"github.com/shogo82148/go-gracedown"
 )
 
-func StartServer(port string) {
+func StartServer() {
+	messaging.InitConsumer()
+
 	mux := bone.New().Prefix(utils.AppendStrings("/", utils.API_VERSION))
 	mux.GetFunc("", websocketHandler)
 	mux.GetFunc("/", websocketHandler)
@@ -30,7 +29,7 @@ func StartServer(port string) {
 	mux.GetFunc("/stats", stats_api.Handler)
 	mux.OptionsFunc("/*", optionsHandler)
 	mux.NotFoundFunc(notFoundHandler)
-	log.Printf("port %s", port)
+	log.Printf("port %s", utils.Realtime.Port)
 
 	signalChan := make(chan os.Signal)
 	signal.Notify(signalChan, syscall.SIGTERM, syscall.SIGINT)
@@ -44,40 +43,20 @@ func StartServer(port string) {
 		}
 	}()
 	log.Println("Swagchat realtime server start!")
-	if err := gracedown.ListenAndServe(utils.AppendStrings(":", port), mux); err != nil {
+	if err := gracedown.ListenAndServe(utils.AppendStrings(":", utils.Realtime.Port), mux); err != nil {
 		log.Fatal("ListenAndServe: ", err)
 	}
 }
 
 func messageHandler(w http.ResponseWriter, r *http.Request) {
 	log.Println("--- messageHandler ---")
-	var sendMessage []byte
 
 	message, err := ioutil.ReadAll(r.Body)
 	if err != nil {
 		log.Println(err)
 	}
 	log.Println("\n", string(message))
-
-	var receivedMessage models.ReceivedMessage
-	if err := json.Unmarshal(message, &receivedMessage); err == nil {
-		log.Println("==========================>")
-		log.Printf("%#v\n", receivedMessage)
-
-		if receivedMessage.Message != nil {
-			log.Printf("%#v\n", receivedMessage.Message)
-			log.Printf("%#v\n", receivedMessage.Message.Data)
-			message, err = base64.StdEncoding.DecodeString(receivedMessage.Message.Data)
-			if err != nil {
-				log.Println(err.Error())
-			}
-		}
-		log.Println("<==========================")
-	}
-	sendMessage = bytes.Replace(message, []byte("\n"), []byte(" "), -1)
-	sendMessage = bytes.Replace(sendMessage, []byte("\\"), []byte(""), -1)
-	sendMessage = bytes.TrimSpace(sendMessage)
-	services.Manager.Broadcast <- sendMessage
+	services.Send(message)
 }
 
 func websocketHandler(w http.ResponseWriter, r *http.Request) {
