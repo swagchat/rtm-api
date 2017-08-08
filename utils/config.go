@@ -14,8 +14,11 @@ type RealtimeSetting struct {
 }
 
 type QueSetting struct {
-	Host    string
-	Port    string
-	Topic   string
-	Channel string
+	Port           string
+	NsqlookupdHost string
+	NsqlookupdPort string
+	NsqdHost       string
+	NsqdPort       string
+	Topic          string
+	Channel        string
 }

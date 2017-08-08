@@ -3,6 +3,7 @@ package messaging
 import (
 	"fmt"
 	"log"
+	"net/http"
 	"os"
 	"reflect"
 	"unsafe"
@@ -11,6 +12,8 @@ import (
 	"github.com/fairway-corp/swagchat-realtime/utils"
 	nsq "github.com/nsqio/go-nsq"
 )
+
+var Con *nsq.Consumer
 
 func b2s(b []byte) string {
 	bh := (*reflect.SliceHeader)(unsafe.Pointer(&b))
@@ -21,8 +24,8 @@ func hello(s string) {
 	fmt.Println(s)
 }
 
-func InitConsumer() {
-	if utils.Que.Host != "" {
+func Subscribe() {
+	if utils.Que.NsqlookupdHost != "" {
 		config := nsq.NewConfig()
 		channel := utils.Que.Channel
 		hostname, err := os.Hostname()
@@ -30,15 +33,26 @@ func InitConsumer() {
 			config.Hostname = hostname
 			channel = hostname
 		}
-		c, _ := nsq.NewConsumer(utils.Que.Topic, channel, config)
-		c.AddHandler(nsq.HandlerFunc(func(message *nsq.Message) error {
-			log.Printf("Got a message: %v", message)
-			services.Send(message.Body)
+		Con, _ = nsq.NewConsumer(utils.Que.Topic, channel, config)
+		Con.AddHandler(nsq.HandlerFunc(func(message *nsq.Message) error {
+			log.Printf("[NSQ]Got a message: %v", message)
+			services.Srv.Broadcast <- message.Body
 			return nil
 		}))
-		err = c.ConnectToNSQLookupd(utils.Que.Host + ":" + utils.Que.Port)
+		err = Con.ConnectToNSQLookupd(utils.Que.NsqlookupdHost + ":" + utils.Que.NsqlookupdPort)
 		if err != nil {
 			log.Panic("Could not connect")
 		}
+	}
+}
+
+func Unsubscribe() {
+	if Con != nil {
+		hostname, err := os.Hostname()
+		resp, err := http.Post("http://"+utils.Que.NsqdHost+":"+utils.Que.NsqdPort+"/channel/delete?topic="+utils.Que.Topic+"&channel="+hostname, "text/plain", nil)
+		if err != nil {
+			log.Println(err)
+		}
+		log.Println(resp)
 	}
 }
