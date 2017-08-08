@@ -3,8 +3,8 @@ package handlers
 import (
 	"io/ioutil"
 	"log"
-	"net"
 	"net/http"
+	"net/url"
 	"os"
 	"os/signal"
 	"strings"
@@ -20,8 +20,6 @@ import (
 )
 
 func StartServer() {
-	messaging.InitConsumer()
-
 	mux := bone.New().Prefix(utils.AppendStrings("/", utils.API_VERSION))
 	mux.GetFunc("", websocketHandler)
 	mux.GetFunc("/", websocketHandler)
@@ -38,6 +36,7 @@ func StartServer() {
 			s := <-signalChan
 			if s == syscall.SIGTERM || s == syscall.SIGINT {
 				log.Println("msg", "Swagchat Realtime Shutdown start!")
+				messaging.Unsubscribe()
 				gracedown.Close()
 			}
 		}
@@ -50,35 +49,33 @@ func StartServer() {
 
 func messageHandler(w http.ResponseWriter, r *http.Request) {
 	log.Println("--- messageHandler ---")
-
 	message, err := ioutil.ReadAll(r.Body)
 	if err != nil {
 		log.Println(err)
 	}
-	log.Println("\n", string(message))
-	services.Send(message)
+	services.Srv.Broadcast <- message
 }
 
 func websocketHandler(w http.ResponseWriter, r *http.Request) {
-	addrs, err := net.InterfaceAddrs()
-	log.Println("-------------------------------------------------")
-	for _, addrs := range addrs {
-		log.Println(addrs.String())
-	}
-	log.Println("-------------------------------------------------")
-
-	ws, err := upgrader.Upgrade(w, r, nil)
+	conn, err := upgrader.Upgrade(w, r, nil)
 	if err != nil {
 		log.Println(err)
 		return
 	}
-	conn := &services.Conn{
+
+	c := &services.Client{
+		Conn: conn,
 		Send: make(chan []byte, 256),
-		Ws:   ws,
 	}
-	//services.Manager.Register <- conn
-	go conn.WritePump()
-	conn.ReadPump()
+
+	params, _ := url.ParseQuery(r.URL.RawQuery)
+	if userIdSlice, ok := params["userId"]; ok {
+		c.UserId = userIdSlice[0]
+	}
+
+	services.Srv.Connection.AddClient(c)
+	go c.WritePump()
+	go c.ReadPump()
 }
 
 var upgrader = websocket.Upgrader{
