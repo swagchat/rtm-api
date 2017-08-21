@@ -64,13 +64,15 @@ func (s *Server) broadcast(message []byte) {
 		json.Unmarshal(messageMap.Payload, &payloadText)
 	}
 
-	for conn := range s.rooms[messageMap.RoomId].clients[messageMap.UserId].clients[messageMap.EventName].clients {
-		log.Printf("------> %p", conn)
-		select {
-		case conn.Send <- message:
-		default:
-			close(conn.Send)
-			delete(Srv.clients, conn)
+	for _, roomUser := range s.rooms[messageMap.RoomId].roomUsers {
+		for conn, _ := range roomUser.events[messageMap.EventName].clients {
+			log.Printf("------> %p", conn)
+			select {
+			case conn.Send <- message:
+			default:
+				close(conn.Send)
+				delete(Srv.clients, conn)
+			}
 		}
 	}
 }
