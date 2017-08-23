@@ -48,6 +48,10 @@ docker run swagchat/realtime
 
 [Docker repository](https://hub.docker.com/r/swagchat/realtime/)
 
+### heroku
+
+[![Deploy](https://www.herokucdn.com/deploy/button.svg)](https://heroku.com/deploy)
+
 ## License
 
 MIT License.
