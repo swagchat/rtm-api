@@ -40,8 +40,6 @@ func StartServer() {
 	mux := bone.New()
 	mux.GetFunc("", indexHandler)
 	mux.GetFunc("/", indexHandler)
-	mux.GetFunc(utils.AppendStrings("/", utils.API_VERSION), indexHandler)
-	mux.GetFunc(utils.AppendStrings("/", utils.API_VERSION, "/"), indexHandler)
 	mux.GetFunc("/stats", stats_api.Handler)
 	mux.GetFunc(utils.AppendStrings("/", utils.API_VERSION), websocketHandler)
 	mux.GetFunc(utils.AppendStrings("/", utils.API_VERSION, "/"), websocketHandler)
