@@ -48,7 +48,6 @@ func StartServer() {
 	mux.PostFunc(utils.AppendStrings("/", utils.API_VERSION, "/message"), messageHandler)
 	mux.OptionsFunc(utils.AppendStrings("/", utils.API_VERSION, "/*"), optionsHandler)
 	mux.NotFoundFunc(notFoundHandler)
-	log.Printf("port %s", utils.Realtime.Port)
 
 	signalChan := make(chan os.Signal)
 	signal.Notify(signalChan, syscall.SIGTERM, syscall.SIGINT)
@@ -72,6 +71,7 @@ func StartServer() {
 
 `
 	fmt.Println(aa)
+	fmt.Printf("port %s\n", utils.Realtime.Port)
 	log.Println("Swagchat realtime server start!")
 	if err := gracedown.ListenAndServe(utils.AppendStrings(":", utils.Realtime.Port), mux); err != nil {
 		log.Fatal("ListenAndServe: ", err)
