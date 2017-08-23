@@ -1,0 +1,7 @@
+{
+  "name": "swagchat RTMAPI",
+  "description": "Open source chat components - swagchat RTM API",
+  "repository": "https://github.com/fairway-corp/swagchat-rtm-api",
+  "logo": "https://www.herokucdn.com/deploy/button.svg",
+  "keywords": ["golang", "chat", "messaging", "realtime-messaging"]
+}
