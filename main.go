@@ -7,6 +7,7 @@ package main
 import (
 	"flag"
 	"log"
+	"os"
 
 	"github.com/fairway-corp/swagchat-realtime/handlers"
 	"github.com/fairway-corp/swagchat-realtime/messaging"
@@ -26,7 +27,12 @@ func main() {
 	)
 	log.SetFlags(log.Lshortfile)
 
-	flag.StringVar(&port, "port", "9100", "service port")
+	var v string
+	if v = os.Getenv("PORT"); v != "" {
+		port = v
+	} else {
+		flag.StringVar(&port, "port", "9100", "service port")
+	}
 	flag.StringVar(&nsqlookupdHost, "nsqlookupdHost", "", "Host name of nsqlookupd")
 	flag.StringVar(&nsqlookupdPort, "nsqlookupdPort", "4161", "Port no of nsqlookupd")
 	flag.StringVar(&nsqdHost, "nsqdHost", "", "Host name of nsqd")

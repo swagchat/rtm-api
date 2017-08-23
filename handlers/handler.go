@@ -1,6 +1,8 @@
 package handlers
 
 import (
+	"encoding/json"
+	"fmt"
 	"io/ioutil"
 	"log"
 	"net/http"
@@ -19,13 +21,32 @@ import (
 	"github.com/shogo82148/go-gracedown"
 )
 
+var (
+	allowedMethods []string = []string{
+		"POST",
+		"GET",
+		"OPTIONS",
+		"PUT",
+		"PATCH",
+		"DELETE",
+	}
+	NoBodyStatusCodes []int = []int{
+		http.StatusNotFound,
+		http.StatusConflict,
+	}
+)
+
 func StartServer() {
-	mux := bone.New().Prefix(utils.AppendStrings("/", utils.API_VERSION))
-	mux.GetFunc("", websocketHandler)
-	mux.GetFunc("/", websocketHandler)
-	mux.PostFunc("/message", messageHandler)
+	mux := bone.New()
+	mux.GetFunc("", indexHandler)
+	mux.GetFunc("/", indexHandler)
+	mux.GetFunc(utils.AppendStrings("/", utils.API_VERSION), indexHandler)
+	mux.GetFunc(utils.AppendStrings("/", utils.API_VERSION, "/"), indexHandler)
 	mux.GetFunc("/stats", stats_api.Handler)
-	mux.OptionsFunc("/*", optionsHandler)
+	mux.GetFunc(utils.AppendStrings("/", utils.API_VERSION), websocketHandler)
+	mux.GetFunc(utils.AppendStrings("/", utils.API_VERSION, "/"), websocketHandler)
+	mux.PostFunc(utils.AppendStrings("/", utils.API_VERSION, "/message"), messageHandler)
+	mux.OptionsFunc(utils.AppendStrings("/", utils.API_VERSION, "/*"), optionsHandler)
 	mux.NotFoundFunc(notFoundHandler)
 	log.Printf("port %s", utils.Realtime.Port)
 
@@ -41,10 +62,24 @@ func StartServer() {
 			}
 		}
 	}()
+	aa := `
+███████╗██╗    ██╗ █████╗  ██████╗  ██████╗██╗  ██╗ █████╗ ████████╗    ██████╗ ████████╗███╗   ███╗     █████╗ ██████╗ ██╗
+██╔════╝██║    ██║██╔══██╗██╔════╝ ██╔════╝██║  ██║██╔══██╗╚══██╔══╝    ██╔══██╗╚══██╔══╝████╗ ████║    ██╔══██╗██╔══██╗██║
+███████╗██║ █╗ ██║███████║██║  ███╗██║     ███████║███████║   ██║       ██████╔╝   ██║   ██╔████╔██║    ███████║██████╔╝██║
+╚════██║██║███╗██║██╔══██║██║   ██║██║     ██╔══██║██╔══██║   ██║       ██╔══██╗   ██║   ██║╚██╔╝██║    ██╔══██║██╔═══╝ ██║
+███████║╚███╔███╔╝██║  ██║╚██████╔╝╚██████╗██║  ██║██║  ██║   ██║       ██║  ██║   ██║   ██║ ╚═╝ ██║    ██║  ██║██║     ██║
+╚══════╝ ╚══╝╚══╝ ╚═╝  ╚═╝ ╚═════╝  ╚═════╝╚═╝  ╚═╝╚═╝  ╚═╝   ╚═╝       ╚═╝  ╚═╝   ╚═╝   ╚═╝     ╚═╝    ╚═╝  ╚═╝╚═╝     ╚═╝
+
+`
+	fmt.Println(aa)
 	log.Println("Swagchat realtime server start!")
 	if err := gracedown.ListenAndServe(utils.AppendStrings(":", utils.Realtime.Port), mux); err != nil {
 		log.Fatal("ListenAndServe: ", err)
 	}
+}
+
+func indexHandler(w http.ResponseWriter, r *http.Request) {
+	respond(w, r, http.StatusOK, "text/plain", utils.AppendStrings("swagchat RTM API version ", utils.API_VERSION))
 }
 
 func messageHandler(w http.ResponseWriter, r *http.Request) {
@@ -105,11 +140,21 @@ func notFoundHandler(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotFound)
 }
 
-var allowedMethods []string = []string{
-	"POST",
-	"GET",
-	"OPTIONS",
-	"PUT",
-	"PATCH",
-	"DELETE",
+func encodeBody(w http.ResponseWriter, r *http.Request, v interface{}) error {
+	return json.NewEncoder(w).Encode(v)
+}
+
+func respond(w http.ResponseWriter, r *http.Request, status int, contentType string, data interface{}) {
+	if contentType != "" {
+		w.Header().Set("Content-Type", contentType)
+	}
+	w.WriteHeader(status)
+	for _, v := range NoBodyStatusCodes {
+		if status == v {
+			data = nil
+		}
+	}
+	if data != nil {
+		encodeBody(w, r, data)
+	}
 }
