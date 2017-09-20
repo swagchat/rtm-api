@@ -4,25 +4,19 @@
 
 
 
-# SwagChat Realtime Messaging (Not For Production Use!)
+# swagchat Real Time Messaging
 
-SwagChat is an open source chat components for your webapps.
-
-* **Easy to deploy**
-* **Easy to customize**
-* **Easy to scale**
-
-## Components
-
-* [RESTful API Server (Go)](https://github.com/fairway-corp/swagchat-api)
-* **Realtime Messaging (Go) ---> This repository**
-* [Client SDK (TypeScript & JavaScript)](https://github.com/fairway-corp/swagchat-sdk)
-* [UIKit (Typescript - React)](https://github.com/fairway-corp/react-swagchat)
-
+swagchat is an open source chat components for your webapps.
 
 ## Architecture
 
-![Architecture](https://client.fairway.ne.jp/swagchat/img/architecture-201703011307.png "Architecture")
+![Architecture](https://client.fairway.ne.jp/swagchat/img/swagchat-start-guide-20170920.png "Architecture")
+
+##### Related repositories
+
+* [Chat API](https://github.com/fairway-corp/swagchat-chat-api)
+* [SDK (TypeScript & JavaScript)](https://github.com/swagchat/swagchat-sdk-js)
+* [UIKit (A set of React components)](https://github.com/swagchat/react-swagchat)
 
 ## Quick start
 
