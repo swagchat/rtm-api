@@ -1,6 +1,6 @@
 package models
 
-import "github.com/fairway-corp/swagchat-realtime/utils"
+import "github.com/swagchat/rtm-api/utils"
 
 type Message struct {
 	Id        uint64         `json:"id,omitempty" db:"id"`

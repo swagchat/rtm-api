@@ -8,9 +8,9 @@ import (
 	"reflect"
 	"unsafe"
 
-	"github.com/fairway-corp/swagchat-realtime/services"
-	"github.com/fairway-corp/swagchat-realtime/utils"
 	nsq "github.com/nsqio/go-nsq"
+	"github.com/swagchat/rtm-api/services"
+	"github.com/swagchat/rtm-api/utils"
 )
 
 var Con *nsq.Consumer

@@ -1,5 +1,5 @@
 {
-	"ImportPath": "github.com/fairway-corp/swagchat-realtime",
+	"ImportPath": "github.com/swagchat/rtm-api",
 	"GoVersion": "go1.7",
 	"GodepVersion": "v79",
 	"Deps": [

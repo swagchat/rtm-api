@@ -6,7 +6,7 @@ import (
 	"os"
 	"time"
 
-	"github.com/fairway-corp/swagchat-realtime/models"
+	"github.com/swagchat/rtm-api/models"
 )
 
 var Srv Server

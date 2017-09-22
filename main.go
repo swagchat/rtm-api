@@ -9,10 +9,10 @@ import (
 	"log"
 	"os"
 
-	"github.com/fairway-corp/swagchat-realtime/handlers"
-	"github.com/fairway-corp/swagchat-realtime/messaging"
-	"github.com/fairway-corp/swagchat-realtime/services"
-	"github.com/fairway-corp/swagchat-realtime/utils"
+	"github.com/swagchat/rtm-api/handlers"
+	"github.com/swagchat/rtm-api/messaging"
+	"github.com/swagchat/rtm-api/services"
+	"github.com/swagchat/rtm-api/utils"
 )
 
 func main() {

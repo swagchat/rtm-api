@@ -1,4 +1,0 @@
-FROM alpine:3.6
-COPY ./swagchat-realtime /usr/bin/swagchat-realtime
-EXPOSE 9100
-CMD ["/usr/bin/swagchat-realtime"]

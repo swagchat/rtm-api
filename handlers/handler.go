@@ -12,13 +12,13 @@ import (
 	"strings"
 	"syscall"
 
-	"github.com/fairway-corp/swagchat-realtime/messaging"
-	"github.com/fairway-corp/swagchat-realtime/services"
-	"github.com/fairway-corp/swagchat-realtime/utils"
 	"github.com/fukata/golang-stats-api-handler"
 	"github.com/go-zoo/bone"
 	"github.com/gorilla/websocket"
 	"github.com/shogo82148/go-gracedown"
+	"github.com/swagchat/rtm-api/messaging"
+	"github.com/swagchat/rtm-api/services"
+	"github.com/swagchat/rtm-api/utils"
 )
 
 var (
