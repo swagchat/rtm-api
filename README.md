@@ -33,11 +33,11 @@ You can download binary from [Release page](https://github.com/swagchat/rtm-api/
 ### docker
 
 ```
-docker pull swagchat/realtime
-docker run swagchat/realtime
+docker pull swagchat/rtm-api
+docker run swagchat/rtm-api
 ```
 
-[Docker repository](https://hub.docker.com/r/swagchat/realtime/)
+[Docker repository](https://hub.docker.com/r/swagchat/rtm-api/)
 
 ### heroku
 
