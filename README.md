@@ -23,17 +23,16 @@ You can download binary from [Release page](https://github.com/swagchat/rtm-api/
 
 ```
 # In the case of macOS (Default port is 9100)
-./swagchat-realtime_darwin_amd64
+./swagchat-rtm-api_darwin_amd64
 
 
 # You can also specify the port
-./swagchat-realtime_darwin_amd64 -port 9200
+./swagchat-rtm-api_darwin_amd64 -port 9200
 ```
 
 ### docker
 
 ```
-docker pull swagchat/rtm-api
 docker run swagchat/rtm-api
 ```
 
