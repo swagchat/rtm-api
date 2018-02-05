@@ -454,6 +454,9 @@ type peerInfo struct {
 //
 // initiate a connection to any new producers that are identified.
 func (r *Consumer) queryLookupd() {
+	retries := 0
+
+retry:
 	endpoint := r.nextLookupdEndpoint()
 
 	r.log(LogLevelInfo, "querying nsqlookupd %s", endpoint)
@@ -462,6 +465,11 @@ func (r *Consumer) queryLookupd() {
 	err := apiRequestNegotiateV1("GET", endpoint, nil, &data)
 	if err != nil {
 		r.log(LogLevelError, "error querying nsqlookupd (%s) - %s", endpoint, err)
+		retries++
+		if retries < 3 {
+			r.log(LogLevelInfo, "retrying with next nsqlookupd")
+			goto retry
+		}
 		return
 	}
 
@@ -994,12 +1002,18 @@ func (r *Consumer) redistributeRDY() {
 	possibleConns := make([]*Conn, 0, len(conns))
 	for _, c := range conns {
 		lastMsgDuration := time.Now().Sub(c.LastMessageTime())
+		lastRdyDuration := time.Now().Sub(c.LastRdyTime())
 		rdyCount := c.RDY()
 		r.log(LogLevelDebug, "(%s) rdy: %d (last message received %s)",
 			c.String(), rdyCount, lastMsgDuration)
-		if rdyCount > 0 && lastMsgDuration > r.config.LowRdyIdleTimeout {
-			r.log(LogLevelDebug, "(%s) idle connection, giving up RDY", c.String())
-			r.updateRDY(c, 0)
+		if rdyCount > 0 {
+			if lastMsgDuration > r.config.LowRdyIdleTimeout {
+				r.log(LogLevelDebug, "(%s) idle connection, giving up RDY", c.String())
+				r.updateRDY(c, 0)
+			} else if lastRdyDuration > r.config.LowRdyTimeout {
+				r.log(LogLevelDebug, "(%s) RDY timeout, giving up RDY", c.String())
+				r.updateRDY(c, 0)
+			}
 		}
 		possibleConns = append(possibleConns, c)
 	}
