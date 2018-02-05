@@ -1,7 +1,8 @@
 package utils
 
 const (
-	API_VERSION = "v0"
+	API_VERSION      = "v0"
+	MAX_MESSAGE_SIZE = 8192
 )
 
 var (
@@ -10,7 +11,8 @@ var (
 )
 
 type RealtimeSetting struct {
-	Port string
+	Port                    string
+	IsDisplayConnectionInfo bool
 }
 
 type QueSetting struct {

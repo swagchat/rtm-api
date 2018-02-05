@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	//"context"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
@@ -19,6 +20,7 @@ import (
 	"github.com/swagchat/rtm-api/messaging"
 	"github.com/swagchat/rtm-api/services"
 	"github.com/swagchat/rtm-api/utils"
+	//"time"
 )
 
 var (
@@ -43,6 +45,7 @@ func StartServer() {
 	mux.GetFunc("/stats", stats_api.Handler)
 	mux.GetFunc(utils.AppendStrings("/", utils.API_VERSION), websocketHandler)
 	mux.GetFunc(utils.AppendStrings("/", utils.API_VERSION, "/"), websocketHandler)
+	mux.GetFunc(utils.AppendStrings("/", utils.API_VERSION, "/speech"), speechHandler)
 	mux.PostFunc(utils.AppendStrings("/", utils.API_VERSION, "/message"), messageHandler)
 	mux.OptionsFunc(utils.AppendStrings("/", utils.API_VERSION, "/*"), optionsHandler)
 	mux.NotFoundFunc(notFoundHandler)
@@ -111,8 +114,37 @@ func websocketHandler(w http.ResponseWriter, r *http.Request) {
 	go c.ReadPump()
 }
 
+func speechHandler(w http.ResponseWriter, r *http.Request) {
+	conn, err := speechUpgrader.Upgrade(w, r, nil)
+	if err != nil {
+		log.Println(err)
+		return
+	}
+
+	ctx := r.Context()
+	stream := utils.SpeechClient(ctx)
+
+	c := &services.SpeechClient{
+		Conn:   conn,
+		Send:   make(chan []byte, 256),
+		Stream: &stream,
+		Ctx:    ctx,
+	}
+
+	go c.WritePump()
+	go c.ReadPump()
+}
+
 var upgrader = websocket.Upgrader{
-	ReadBufferSize:  1024,
+	ReadBufferSize:  utils.MAX_MESSAGE_SIZE,
+	WriteBufferSize: 1024,
+	CheckOrigin: func(r *http.Request) bool {
+		return true
+	},
+}
+
+var speechUpgrader = websocket.Upgrader{
+	ReadBufferSize:  utils.MAX_MESSAGE_SIZE,
 	WriteBufferSize: 1024,
 	CheckOrigin: func(r *http.Request) bool {
 		return true

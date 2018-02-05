@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/swagchat/rtm-api/models"
+	"github.com/swagchat/rtm-api/utils"
 )
 
 var Srv Server
@@ -24,7 +25,9 @@ func (s *Server) Run() {
 
 	for {
 		var infoInterval <-chan time.Time
-		infoInterval = time.After(5 * time.Second)
+		if utils.Realtime.IsDisplayConnectionInfo {
+			infoInterval = time.After(5 * time.Second)
+		}
 
 		select {
 		case <-infoInterval:

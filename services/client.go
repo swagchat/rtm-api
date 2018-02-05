@@ -4,13 +4,13 @@ import (
 	"time"
 
 	"github.com/gorilla/websocket"
+	"github.com/swagchat/rtm-api/utils"
 )
 
 const (
-	writeWait      = 10 * time.Second
-	pongWait       = 60 * time.Second
-	pingPeriod     = (pongWait * 9) / 10
-	maxMessageSize = 512
+	writeWait  = 10 * time.Second
+	pongWait   = 60 * time.Second
+	pingPeriod = (pongWait * 9) / 10
 )
 
 var (
@@ -38,7 +38,7 @@ func (c *Client) ReadPump() {
 	defer func() {
 		c.Conn.Close()
 	}()
-	c.Conn.SetReadLimit(maxMessageSize)
+	c.Conn.SetReadLimit(utils.MAX_MESSAGE_SIZE)
 	c.Conn.SetReadDeadline(time.Now().Add(pongWait))
 	c.Conn.SetPongHandler(func(string) error { c.Conn.SetReadDeadline(time.Now().Add(pongWait)); return nil })
 	for {

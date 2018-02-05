@@ -17,13 +17,14 @@ import (
 
 func main() {
 	var (
-		port           string
-		nsqlookupdHost string
-		nsqlookupdPort string
-		nsqdHost       string
-		nsqdPort       string
-		queTopic       string
-		queChannel     string
+		port                    string
+		isDisplayConnectionInfo string
+		nsqlookupdHost          string
+		nsqlookupdPort          string
+		nsqdHost                string
+		nsqdPort                string
+		queTopic                string
+		queChannel              string
 	)
 	log.SetFlags(log.Lshortfile)
 
@@ -33,6 +34,7 @@ func main() {
 	} else {
 		flag.StringVar(&port, "port", "9100", "service port")
 	}
+	flag.StringVar(&isDisplayConnectionInfo, "isDisplayConnectionInfo", "false", "Display connection info.")
 	flag.StringVar(&nsqlookupdHost, "nsqlookupdHost", "", "Host name of nsqlookupd")
 	flag.StringVar(&nsqlookupdPort, "nsqlookupdPort", "4161", "Port no of nsqlookupd")
 	flag.StringVar(&nsqdHost, "nsqdHost", "", "Host name of nsqd")
@@ -42,6 +44,11 @@ func main() {
 	flag.Parse()
 
 	utils.Realtime.Port = port
+	if isDisplayConnectionInfo == "true" {
+		utils.Realtime.IsDisplayConnectionInfo = true
+	} else {
+		utils.Realtime.IsDisplayConnectionInfo = false
+	}
 	utils.Que.NsqlookupdHost = nsqlookupdHost
 	utils.Que.NsqlookupdPort = nsqlookupdPort
 	utils.Que.NsqdHost = nsqdHost
