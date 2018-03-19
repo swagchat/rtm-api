@@ -15,41 +15,50 @@ import (
 
 var Con *nsq.Consumer
 
+type NsqProvider struct{}
+
+func (provider NsqProvider) Init() error {
+	return nil
+}
+
 func b2s(b []byte) string {
 	bh := (*reflect.SliceHeader)(unsafe.Pointer(&b))
 	sh := reflect.StringHeader{bh.Data, bh.Len}
 	return *(*string)(unsafe.Pointer(&sh))
 }
+
 func hello(s string) {
 	fmt.Println(s)
 }
 
-func Subscribe() {
-	if utils.Que.NsqlookupdHost != "" {
+func (provider NsqProvider) Subscribe() {
+	c := utils.GetConfig()
+	if c.NSQ.NsqlookupdHost != "" {
 		config := nsq.NewConfig()
-		channel := utils.Que.Channel
+		channel := c.NSQ.Channel
 		hostname, err := os.Hostname()
 		if err == nil {
 			config.Hostname = hostname
 			channel = hostname
 		}
-		Con, _ = nsq.NewConsumer(utils.Que.Topic, channel, config)
+		Con, _ = nsq.NewConsumer(c.NSQ.Topic, channel, config)
 		Con.AddHandler(nsq.HandlerFunc(func(message *nsq.Message) error {
 			log.Printf("[NSQ]Got a message: %v", message)
 			services.Srv.Broadcast <- message.Body
 			return nil
 		}))
-		err = Con.ConnectToNSQLookupd(utils.Que.NsqlookupdHost + ":" + utils.Que.NsqlookupdPort)
+		err = Con.ConnectToNSQLookupd(c.NSQ.NsqlookupdHost + ":" + c.NSQ.NsqlookupdPort)
 		if err != nil {
 			log.Panic("Could not connect")
 		}
 	}
 }
 
-func Unsubscribe() {
+func (provider NsqProvider) Unsubscribe() {
 	if Con != nil {
+		c := utils.GetConfig()
 		hostname, err := os.Hostname()
-		resp, err := http.Post("http://"+utils.Que.NsqdHost+":"+utils.Que.NsqdPort+"/channel/delete?topic="+utils.Que.Topic+"&channel="+hostname, "text/plain", nil)
+		resp, err := http.Post("http://"+c.NSQ.NsqdHost+":"+c.NSQ.NsqdPort+"/channel/delete?topic="+c.NSQ.Topic+"&channel="+hostname, "text/plain", nil)
 		if err != nil {
 			log.Println(err)
 		}

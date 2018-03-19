@@ -25,7 +25,7 @@ func (s *Server) Run() {
 
 	for {
 		var infoInterval <-chan time.Time
-		if utils.Realtime.IsDisplayConnectionInfo {
+		if utils.GetConfig().Realtime.IsDisplayConnectionInfo {
 			infoInterval = time.After(5 * time.Second)
 		}
 

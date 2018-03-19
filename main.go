@@ -5,9 +5,8 @@
 package main
 
 import (
-	"flag"
-	"log"
-	"os"
+	"fmt"
+	"net/http"
 
 	"github.com/swagchat/rtm-api/handlers"
 	"github.com/swagchat/rtm-api/messaging"
@@ -16,47 +15,20 @@ import (
 )
 
 func main() {
-	var (
-		port                    string
-		isDisplayConnectionInfo string
-		nsqlookupdHost          string
-		nsqlookupdPort          string
-		nsqdHost                string
-		nsqdPort                string
-		queTopic                string
-		queChannel              string
-	)
-	log.SetFlags(log.Lshortfile)
+	utils.SetupLogger()
 
-	var v string
-	if v = os.Getenv("PORT"); v != "" {
-		port = v
-	} else {
-		flag.StringVar(&port, "port", "8102", "service port")
+	if utils.IsShowVersion {
+		fmt.Printf("API Version %s\nBuild Version %s\n", utils.APIVersion, utils.BuildVersion)
+		return
 	}
-	flag.StringVar(&isDisplayConnectionInfo, "isDisplayConnectionInfo", "false", "Display connection info.")
-	flag.StringVar(&nsqlookupdHost, "nsqlookupdHost", "", "Host name of nsqlookupd")
-	flag.StringVar(&nsqlookupdPort, "nsqlookupdPort", "4161", "Port no of nsqlookupd")
-	flag.StringVar(&nsqdHost, "nsqdHost", "", "Host name of nsqd")
-	flag.StringVar(&nsqdPort, "nsqdPort", "4151", "Port no of nsqd")
-	flag.StringVar(&queTopic, "queTopic", "websocket", "Topic name")
-	flag.StringVar(&queChannel, "queChannel", "", "Channel name. If it's not set, channel is hostname.")
-	flag.Parse()
 
-	utils.Realtime.Port = port
-	if isDisplayConnectionInfo == "true" {
-		utils.Realtime.IsDisplayConnectionInfo = true
-	} else {
-		utils.Realtime.IsDisplayConnectionInfo = false
+	if utils.GetConfig().Profiling {
+		go func() {
+			http.ListenAndServe("0.0.0.0:6060", nil)
+		}()
 	}
-	utils.Que.NsqlookupdHost = nsqlookupdHost
-	utils.Que.NsqlookupdPort = nsqlookupdPort
-	utils.Que.NsqdHost = nsqdHost
-	utils.Que.NsqdPort = nsqdPort
-	utils.Que.Topic = queTopic
-	utils.Que.Channel = queChannel
 
-	messaging.Subscribe()
+	messaging.GetMessagingProvider().Subscribe()
 	go services.Srv.Run()
 	handlers.StartServer()
 }

@@ -20,6 +20,7 @@ import (
 	"github.com/swagchat/rtm-api/messaging"
 	"github.com/swagchat/rtm-api/services"
 	"github.com/swagchat/rtm-api/utils"
+	"go.uber.org/zap"
 	//"time"
 )
 
@@ -40,8 +41,9 @@ var (
 
 func StartServer() {
 	mux := bone.New()
+	mux.GetFunc("/", indexHandler)
 	mux.GetFunc("/stats", stats_api.Handler)
-	mux.GetFunc("/", websocketHandler)
+	mux.GetFunc("/ws", websocketHandler)
 	mux.GetFunc("/speech", speechHandler)
 	mux.PostFunc("/message", messageHandler)
 	mux.OptionsFunc("/*", optionsHandler)
@@ -49,35 +51,33 @@ func StartServer() {
 
 	signalChan := make(chan os.Signal)
 	signal.Notify(signalChan, syscall.SIGTERM, syscall.SIGINT)
+	mp := messaging.GetMessagingProvider()
 	go func() {
 		for {
 			s := <-signalChan
 			if s == syscall.SIGTERM || s == syscall.SIGINT {
 				log.Println("msg", "Swagchat Realtime Shutdown start!")
-				messaging.Unsubscribe()
+				mp.Unsubscribe()
 				gracedown.Close()
 			}
 		}
 	}()
-	aa := `
-███████╗██╗    ██╗ █████╗  ██████╗  ██████╗██╗  ██╗ █████╗ ████████╗    ██████╗ ████████╗███╗   ███╗     █████╗ ██████╗ ██╗
-██╔════╝██║    ██║██╔══██╗██╔════╝ ██╔════╝██║  ██║██╔══██╗╚══██╔══╝    ██╔══██╗╚══██╔══╝████╗ ████║    ██╔══██╗██╔══██╗██║
-███████╗██║ █╗ ██║███████║██║  ███╗██║     ███████║███████║   ██║       ██████╔╝   ██║   ██╔████╔██║    ███████║██████╔╝██║
-╚════██║██║███╗██║██╔══██║██║   ██║██║     ██╔══██║██╔══██║   ██║       ██╔══██╗   ██║   ██║╚██╔╝██║    ██╔══██║██╔═══╝ ██║
-███████║╚███╔███╔╝██║  ██║╚██████╔╝╚██████╗██║  ██║██║  ██║   ██║       ██║  ██║   ██║   ██║ ╚═╝ ██║    ██║  ██║██║     ██║
-╚══════╝ ╚══╝╚══╝ ╚═╝  ╚═╝ ╚═════╝  ╚═════╝╚═╝  ╚═╝╚═╝  ╚═╝   ╚═╝       ╚═╝  ╚═╝   ╚═╝   ╚═╝     ╚═╝    ╚═╝  ╚═╝╚═╝     ╚═╝
 
-`
-	fmt.Println(aa)
-	fmt.Printf("port %s\n", utils.Realtime.Port)
-	log.Println("Swagchat realtime server start!")
-	if err := gracedown.ListenAndServe(utils.AppendStrings(":", utils.Realtime.Port), mux); err != nil {
+	c := utils.GetConfig()
+	sb := utils.NewStringBuilder()
+	s := sb.PrintStruct("config", c)
+	utils.AppLogger.Info("",
+		zap.String("msg", fmt.Sprintf("%s Start!", utils.AppName)),
+		zap.String("config", s),
+	)
+
+	if err := gracedown.ListenAndServe(fmt.Sprintf(":%s", c.HttpPort), mux); err != nil {
 		log.Fatal("ListenAndServe: ", err)
 	}
 }
 
 func indexHandler(w http.ResponseWriter, r *http.Request) {
-	respond(w, r, http.StatusOK, "text/plain", utils.AppendStrings("swagchat RTM API version ", utils.API_VERSION))
+	respond(w, r, http.StatusOK, "text/plain", fmt.Sprintf("%s [API Version]%s [Build Version]%s", utils.AppName, utils.APIVersion, utils.BuildVersion))
 }
 
 func messageHandler(w http.ResponseWriter, r *http.Request) {
