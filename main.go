@@ -32,7 +32,7 @@ func main() {
 	if v = os.Getenv("PORT"); v != "" {
 		port = v
 	} else {
-		flag.StringVar(&port, "port", "9100", "service port")
+		flag.StringVar(&port, "port", "8102", "service port")
 	}
 	flag.StringVar(&isDisplayConnectionInfo, "isDisplayConnectionInfo", "false", "Display connection info.")
 	flag.StringVar(&nsqlookupdHost, "nsqlookupdHost", "", "Host name of nsqlookupd")
