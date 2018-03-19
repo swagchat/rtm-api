@@ -40,14 +40,11 @@ var (
 
 func StartServer() {
 	mux := bone.New()
-	mux.GetFunc("", indexHandler)
-	mux.GetFunc("/", indexHandler)
 	mux.GetFunc("/stats", stats_api.Handler)
-	mux.GetFunc(utils.AppendStrings("/", utils.API_VERSION), websocketHandler)
-	mux.GetFunc(utils.AppendStrings("/", utils.API_VERSION, "/"), websocketHandler)
-	mux.GetFunc(utils.AppendStrings("/", utils.API_VERSION, "/speech"), speechHandler)
-	mux.PostFunc(utils.AppendStrings("/", utils.API_VERSION, "/message"), messageHandler)
-	mux.OptionsFunc(utils.AppendStrings("/", utils.API_VERSION, "/*"), optionsHandler)
+	mux.GetFunc("/", websocketHandler)
+	mux.GetFunc("/speech", speechHandler)
+	mux.PostFunc("/message", messageHandler)
+	mux.OptionsFunc("/*", optionsHandler)
 	mux.NotFoundFunc(notFoundHandler)
 
 	signalChan := make(chan os.Signal)
