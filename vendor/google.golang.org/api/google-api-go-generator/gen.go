@@ -458,7 +458,7 @@ func (a *API) jsonBytes() []byte {
 					log.Fatal(err)
 				}
 				var err error
-				slurp, err = json.Marshal(d)
+				slurp, err = json.MarshalIndent(d, "", "  ")
 				if err != nil {
 					log.Fatal(err)
 				}
@@ -2145,6 +2145,8 @@ func (a *argument) exprAsString(prefix string) string {
 		return "strconv.FormatInt(" + prefix + a.goname + ", 10)"
 	case "uint64":
 		return "strconv.FormatUint(" + prefix + a.goname + ", 10)"
+	case "bool":
+		return "strconv.FormatBool(" + prefix + a.goname + ")"
 	}
 	log.Panicf("unknown type: apitype=%q, gotype=%q", a.apitype, a.gotype)
 	return ""
