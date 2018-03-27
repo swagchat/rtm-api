@@ -1,9 +1,30 @@
-FROM alpine:3.6
-ARG API_VERSION="0.3.0"
-ARG EXEC_FILE_NAME="swagchat-rtm-api_alpine_amd64"
-RUN apk --update add tzdata curl \
-  && curl -LJO https://github.com/swagchat/rtm-api/releases/download/v${API_VERSION}/${EXEC_FILE_NAME} \
-  && chmod 700 ${EXEC_FILE_NAME} \
-  && mv ${EXEC_FILE_NAME} /bin/swagchat-rtm-api
-EXPOSE 9000
-CMD ["swagchat-rtm-api"]
+FROM golang:1.10-alpine AS build
+LABEL maintainer betchi
+
+RUN apk add --update --no-cache alpine-sdk bash python
+WORKDIR /root
+RUN git clone https://github.com/edenhill/librdkafka.git
+WORKDIR /root/librdkafka
+RUN ./configure
+RUN make
+RUN make install
+
+COPY . /go/src/github.com/swagchat/rtm-api
+WORKDIR /go/src/github.com/swagchat/rtm-api/
+RUN go build -o rtm-api
+
+
+FROM alpine:3.7
+LABEL maintainer betchi
+
+RUN mkdir -p /app
+COPY --from=build /go/src/github.com/swagchat/rtm-api/rtm-api /app/rtm-api
+COPY --from=build /usr/local/lib/librdkafka.a /usr/local/lib/librdkafka.a
+COPY --from=build /usr/local/lib/librdkafka.so /usr/local/lib/librdkafka.so
+COPY --from=build /usr/local/lib/librdkafka.so.1 /usr/local/lib/librdkafka.so.1
+COPY --from=build /usr/local/include/librdkafka /usr/local/include/librdkafka
+
+STOPSIGNAL SIGTERM
+
+EXPOSE 8102
+CMD /bin/sh -c "cd /app && ./rtm-api"
