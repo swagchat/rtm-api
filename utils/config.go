@@ -56,13 +56,10 @@ type NSQ struct {
 }
 
 type Kafka struct {
-	Port           string
-	NsqlookupdHost string
-	NsqlookupdPort string
-	NsqdHost       string
-	NsqdPort       string
-	Topic          string
-	Channel        string
+	Host    string
+	Port    string
+	GroupID string `yaml:"groupId"`
+	Topic   string
 }
 
 func NewConfig() *config {
@@ -72,7 +69,9 @@ func NewConfig() *config {
 		Level: "development",
 	}
 
-	realtimeSetting := &RealtimeSetting{}
+	realtimeSetting := &RealtimeSetting{
+		IsDisplayConnectionInfo: true,
+	}
 	nsq := &NSQ{}
 	kafka := &Kafka{}
 
@@ -110,17 +109,17 @@ func (c *config) LoadEnvironment() {
 	if v = os.Getenv("HTTP_PORT"); v != "" {
 		c.HttpPort = v
 	}
-	if v = os.Getenv("SC_PORT"); v != "" {
+	if v = os.Getenv("RTM_PORT"); v != "" {
 		c.HttpPort = v
 	}
-	if v = os.Getenv("SC_PROFILING"); v != "" {
+	if v = os.Getenv("RTM_PROFILING"); v != "" {
 		if v == "true" {
 			c.Profiling = true
 		} else if v == "false" {
 			c.Profiling = false
 		}
 	}
-	if v = os.Getenv("SC_ERROR_LOGGING"); v != "" {
+	if v = os.Getenv("RTM_ERROR_LOGGING"); v != "" {
 		if v == "true" {
 			c.ErrorLogging = true
 		} else if v == "false" {
@@ -129,8 +128,26 @@ func (c *config) LoadEnvironment() {
 	}
 
 	// Logging
-	if v = os.Getenv("SC_LOGGING_LEVEL"); v != "" {
+	if v = os.Getenv("RTM_LOGGING_LEVEL"); v != "" {
 		c.Logging.Level = v
+	}
+
+	if v = os.Getenv("RTM_MESSAGING_PROVIDER"); v != "" {
+		c.MessagingProvider = v
+	}
+
+	// kafka
+	if v = os.Getenv("RTM_KAFKA_HOST"); v != "" {
+		c.Kafka.Host = v
+	}
+	if v = os.Getenv("RTM_KAFKA_PORT"); v != "" {
+		c.Kafka.Port = v
+	}
+	if v = os.Getenv("RTM_KAFKA_GROUPID"); v != "" {
+		c.Kafka.GroupID = v
+	}
+	if v = os.Getenv("RTM_KAFKA_TOPIC"); v != "" {
+		c.Kafka.Topic = v
 	}
 }
 
@@ -152,6 +169,12 @@ func (c *config) ParseFlag() {
 	// Logging
 	flag.StringVar(&c.Logging.Level, "logging.level", c.Logging.Level, "")
 
+	// kafka
+	flag.StringVar(&c.Kafka.Host, "kafka.host", c.Kafka.Host, "")
+	flag.StringVar(&c.Kafka.Port, "kafka.port", c.Kafka.Port, "")
+	flag.StringVar(&c.Kafka.GroupID, "kafka.groupId", c.Kafka.GroupID, "")
+	flag.StringVar(&c.Kafka.Topic, "kafka.topic", c.Kafka.Topic, "")
+
 	var isDisplayConnectionInfo string
 	flag.StringVar(&isDisplayConnectionInfo, "isDisplayConnectionInfo", "", "Display connection info.")
 	if profiling == "true" {
@@ -159,6 +182,8 @@ func (c *config) ParseFlag() {
 	} else if profiling == "false" {
 		c.Realtime.IsDisplayConnectionInfo = false
 	}
+
+	flag.StringVar(&c.MessagingProvider, "messagingProvider", c.MessagingProvider, "")
 
 	flag.StringVar(&c.NSQ.NsqlookupdHost, "nsqlookupdHost", c.NSQ.NsqlookupdHost, "Host name of nsqlookupd")
 	flag.StringVar(&c.NSQ.NsqlookupdPort, "nsqlookupdPort", c.NSQ.NsqlookupdPort, "Port no of nsqlookupd")

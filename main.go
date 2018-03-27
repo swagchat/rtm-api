@@ -28,7 +28,7 @@ func main() {
 		}()
 	}
 
-	messaging.GetMessagingProvider().Subscribe()
+	go messaging.GetMessagingProvider().Subscribe()
 	go services.Srv.Run()
 	handlers.StartServer()
 }

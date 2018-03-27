@@ -24,8 +24,8 @@ func GetMessagingProvider() Provider {
 	switch c.MessagingProvider {
 	case "":
 		provider = &NotUseProvider{}
-	// case "kafka":
-	// 	provider = &DirectProvider{}
+	case "kafka":
+		provider = &KafkaProvider{}
 	case "nsq":
 		provider = &NsqProvider{}
 	default:

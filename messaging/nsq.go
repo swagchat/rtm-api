@@ -13,7 +13,7 @@ import (
 	"github.com/swagchat/rtm-api/utils"
 )
 
-var Con *nsq.Consumer
+var NSQConsumer *nsq.Consumer
 
 type NsqProvider struct{}
 
@@ -41,13 +41,13 @@ func (provider NsqProvider) Subscribe() {
 			config.Hostname = hostname
 			channel = hostname
 		}
-		Con, _ = nsq.NewConsumer(c.NSQ.Topic, channel, config)
-		Con.AddHandler(nsq.HandlerFunc(func(message *nsq.Message) error {
+		NSQConsumer, _ = nsq.NewConsumer(c.NSQ.Topic, channel, config)
+		NSQConsumer.AddHandler(nsq.HandlerFunc(func(message *nsq.Message) error {
 			log.Printf("[NSQ]Got a message: %v", message)
 			services.Srv.Broadcast <- message.Body
 			return nil
 		}))
-		err = Con.ConnectToNSQLookupd(c.NSQ.NsqlookupdHost + ":" + c.NSQ.NsqlookupdPort)
+		err = NSQConsumer.ConnectToNSQLookupd(c.NSQ.NsqlookupdHost + ":" + c.NSQ.NsqlookupdPort)
 		if err != nil {
 			log.Panic("Could not connect")
 		}
@@ -55,7 +55,7 @@ func (provider NsqProvider) Subscribe() {
 }
 
 func (provider NsqProvider) Unsubscribe() {
-	if Con != nil {
+	if NSQConsumer != nil {
 		c := utils.GetConfig()
 		hostname, err := os.Hostname()
 		resp, err := http.Post("http://"+c.NSQ.NsqdHost+":"+c.NSQ.NsqdPort+"/channel/delete?topic="+c.NSQ.Topic+"&channel="+hostname, "text/plain", nil)
