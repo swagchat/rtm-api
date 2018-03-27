@@ -4,40 +4,50 @@ import (
 	"encoding/json"
 	"log"
 	"os"
-	"time"
 
 	"github.com/swagchat/rtm-api/models"
-	"github.com/swagchat/rtm-api/utils"
 )
 
-var Srv Server
+var Srv *Server = NewServer()
 
 type Server struct {
-	Connection
+	Connection *Connection
 	Broadcast  chan []byte
 	Register   chan *RcvData
 	Unregister chan *RcvData
 	Close      chan *Client
 }
 
+func NewServer() *Server {
+	conn := &Connection{
+		clients: make(map[*Client]bool),
+		users:   make(map[string]*UserClients),
+		rooms:   make(map[string]*RoomClients),
+	}
+
+	srv := &Server{
+		Connection: conn,
+		Broadcast:  make(chan []byte),
+		Register:   make(chan *RcvData),
+		Unregister: make(chan *RcvData),
+		Close:      make(chan *Client),
+	}
+	return srv
+}
+
+func GetServer() *Server {
+	return Srv
+}
+
 func (s *Server) Run() {
 	hostname, _ := os.Hostname()
 
 	for {
-		var infoInterval <-chan time.Time
-		if utils.GetConfig().Realtime.IsDisplayConnectionInfo {
-			infoInterval = time.After(5 * time.Second)
-		}
-
 		select {
-		case <-infoInterval:
-			// Logging connection information.
-			s.Connection.Info()
-
 		case rcvData := <-s.Register:
 			// Register event
 			log.Printf("[WS-INFO][%s] REGISTER [%s][%s][%s] %p", hostname, rcvData.RoomId, rcvData.UserId, rcvData.EventName, rcvData.Client)
-			s.clients[rcvData.Client] = true
+			s.Connection.clients[rcvData.Client] = true
 			s.Connection.AddEvent(rcvData.UserId, rcvData.RoomId, rcvData.EventName, rcvData.Client)
 
 		case rcvData := <-s.Unregister:
@@ -67,14 +77,14 @@ func (s *Server) broadcast(message []byte) {
 		json.Unmarshal(messageMap.Payload, &payloadText)
 	}
 
-	for _, roomUser := range s.rooms[messageMap.RoomId].roomUsers {
+	for _, roomUser := range s.Connection.rooms[messageMap.RoomId].roomUsers {
 		for conn, _ := range roomUser.events[messageMap.EventName].clients {
 			log.Printf("------> %p", conn)
 			select {
 			case conn.Send <- message:
 			default:
 				close(conn.Send)
-				delete(Srv.clients, conn)
+				delete(Srv.Connection.clients, conn)
 			}
 		}
 	}

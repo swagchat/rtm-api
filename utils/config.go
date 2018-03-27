@@ -5,6 +5,7 @@ import (
 	"io/ioutil"
 	"log"
 	"os"
+	"strconv"
 
 	yaml "gopkg.in/yaml.v2"
 )
@@ -26,15 +27,18 @@ var (
 )
 
 type config struct {
-	Version           string
-	HttpPort          string `yaml:"httpPort"`
-	Profiling         bool
-	ErrorLogging      bool `yaml:"errorLogging"`
-	Logging           *Logging
-	Realtime          *RealtimeSetting
+	Version      string
+	HttpPort     string `yaml:"httpPort"`
+	Profiling    bool
+	ErrorLogging bool `yaml:"errorLogging"`
+	Logging      *Logging
+	Realtime     *RealtimeSetting
+
 	MessagingProvider string `yaml:"messagingProvider"`
 	NSQ               *NSQ
 	Kafka             *Kafka
+
+	Metrics *Metrics
 }
 
 type Logging struct {
@@ -62,6 +66,20 @@ type Kafka struct {
 	Topic   string
 }
 
+type Metrics struct {
+	Provider string
+	Interval int
+	Verbose  bool
+	Stdout   struct {
+		Interval int
+	}
+	Elasticsearch struct {
+		URL      string
+		UserID   string `yaml:"userId"`
+		Password string
+	}
+}
+
 func NewConfig() *config {
 	log.SetFlags(log.Llongfile)
 
@@ -72,8 +90,11 @@ func NewConfig() *config {
 	realtimeSetting := &RealtimeSetting{
 		IsDisplayConnectionInfo: true,
 	}
+
 	nsq := &NSQ{}
 	kafka := &Kafka{}
+
+	metrics := &Metrics{}
 
 	c := &config{
 		Version:           "0",
@@ -85,6 +106,7 @@ func NewConfig() *config {
 		MessagingProvider: "",
 		NSQ:               nsq,
 		Kafka:             kafka,
+		Metrics:           metrics,
 	}
 
 	c.LoadYaml()
@@ -149,6 +171,33 @@ func (c *config) LoadEnvironment() {
 	if v = os.Getenv("RTM_KAFKA_TOPIC"); v != "" {
 		c.Kafka.Topic = v
 	}
+
+	// metrics
+	if v = os.Getenv("RTM_METRICS_PROVIDER"); v != "" {
+		c.Metrics.Provider = v
+	}
+
+	if v = os.Getenv("RTM_METRICS_INTERVAL"); v != "" {
+		interval, _ := strconv.Atoi(v)
+		c.Metrics.Interval = interval
+	}
+
+	if v = os.Getenv("RTM_METRICS_VERBOSE"); v != "" {
+		if v == "true" {
+			c.Metrics.Verbose = true
+		}
+	}
+
+	// elasticsearch
+	if v = os.Getenv("RTM_ELASTICSEARCH_URL"); v != "" {
+		c.Metrics.Elasticsearch.URL = v
+	}
+	if v = os.Getenv("RTM_ELASTICSEARCH_USERID"); v != "" {
+		c.Metrics.Elasticsearch.UserID = v
+	}
+	if v = os.Getenv("RTM_ELASTICSEARCH_PASSWORD"); v != "" {
+		c.Metrics.Elasticsearch.Password = v
+	}
 }
 
 func (c *config) ParseFlag() {
@@ -174,6 +223,16 @@ func (c *config) ParseFlag() {
 	flag.StringVar(&c.Kafka.Port, "kafka.port", c.Kafka.Port, "")
 	flag.StringVar(&c.Kafka.GroupID, "kafka.groupId", c.Kafka.GroupID, "")
 	flag.StringVar(&c.Kafka.Topic, "kafka.topic", c.Kafka.Topic, "")
+
+	// metrics
+	flag.StringVar(&c.Metrics.Provider, "metrics.provider", c.Metrics.Provider, "")
+	flag.IntVar(&c.Metrics.Interval, "metrics.interval", c.Metrics.Interval, "")
+	flag.BoolVar(&c.Metrics.Verbose, "metrics.verbose", c.Metrics.Verbose, "")
+
+	// elasticsearch
+	flag.StringVar(&c.Metrics.Elasticsearch.URL, "elasticsearch.url", c.Metrics.Elasticsearch.URL, "")
+	flag.StringVar(&c.Metrics.Elasticsearch.UserID, "elasticsearch.userId", c.Metrics.Elasticsearch.UserID, "")
+	flag.StringVar(&c.Metrics.Elasticsearch.Password, "elasticsearch.password", c.Metrics.Elasticsearch.Password, "")
 
 	var isDisplayConnectionInfo string
 	flag.StringVar(&isDisplayConnectionInfo, "isDisplayConnectionInfo", "", "Display connection info.")

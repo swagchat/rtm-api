@@ -17,6 +17,10 @@ RUN go build -o rtm-api
 FROM alpine:3.7
 LABEL maintainer betchi
 
+RUN apk --no-cache --update upgrade \
+  && apk add --update --no-cache tzdata ca-certificates \
+  && update-ca-certificates --fresh
+
 RUN mkdir -p /app
 COPY --from=build /go/src/github.com/swagchat/rtm-api/rtm-api /app/rtm-api
 COPY --from=build /usr/local/lib/librdkafka.a /usr/local/lib/librdkafka.a

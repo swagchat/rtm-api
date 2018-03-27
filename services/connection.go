@@ -7,8 +7,8 @@ import (
 
 type Connection struct {
 	clients map[*Client]bool
-	users   map[string]UserClients // index is userId
-	rooms   map[string]RoomClients // index is roomId
+	users   map[string]*UserClients // index is userId
+	rooms   map[string]*RoomClients // index is roomId
 }
 
 type UserClients struct {
@@ -16,11 +16,11 @@ type UserClients struct {
 }
 
 type RoomClients struct {
-	roomUsers map[string]RoomUserClients // index is userId
+	roomUsers map[string]*RoomUserClients // index is userId
 }
 
 type RoomUserClients struct {
-	events map[string]EventClients // index is eventName
+	events map[string]*EventClients // index is eventName
 }
 
 type EventClients struct {
@@ -37,32 +37,15 @@ func (con *Connection) AddClient(c *Client) {
 
 	con.clients[c] = true
 
-	var userClients UserClients
+	var userClients *UserClients
 	if _, ok := con.users[c.UserId]; ok {
 		con.users[c.UserId].clients[c] = true
 	} else {
-		userClients = UserClients{
+		userClients = &UserClients{
 			clients: make(map[*Client]bool),
 		}
 		userClients.clients[c] = true
 		con.users[c.UserId] = userClients
-	}
-}
-
-func (con *Connection) Info() {
-	hostname, _ := os.Hostname()
-	log.Printf("[WS-INFO][%s] All Clients %d", hostname, len(con.clients))
-	for userId, _ := range con.users {
-		log.Printf("[WS-INFO][%s] UserId[%s] %d", hostname, userId, len(con.users[userId].clients))
-	}
-	for roomId, _ := range con.rooms {
-		log.Printf("[WS-INFO][%s] RoomId[%s] %d", hostname, roomId, len(con.rooms[roomId].roomUsers))
-		for userId, _ := range con.rooms[roomId].roomUsers {
-			log.Printf("[WS-INFO][%s] RoomId[%s][%s] %d", hostname, roomId, userId, len(con.rooms[roomId].roomUsers[userId].events))
-			for eventName, _ := range con.rooms[roomId].roomUsers[userId].events {
-				log.Printf("[WS-INFO][%s] RoomId[%s][%s][%s] %d", hostname, roomId, userId, eventName, len(con.rooms[roomId].roomUsers[userId].events[eventName].clients))
-			}
-		}
 	}
 }
 
@@ -111,13 +94,13 @@ func (con *Connection) AddEvent(userId, roomId, eventName string, c *Client) {
 	}
 
 	if _, ok := con.rooms[roomId]; !ok {
-		rc := RoomClients{
-			roomUsers: make(map[string]RoomUserClients),
+		rc := &RoomClients{
+			roomUsers: make(map[string]*RoomUserClients),
 		}
-		ruc := RoomUserClients{
-			events: make(map[string]EventClients),
+		ruc := &RoomUserClients{
+			events: make(map[string]*EventClients),
 		}
-		ec := EventClients{
+		ec := &EventClients{
 			clients: make(map[*Client]bool),
 		}
 		ec.clients[c] = true
@@ -125,17 +108,17 @@ func (con *Connection) AddEvent(userId, roomId, eventName string, c *Client) {
 		rc.roomUsers[userId] = ruc
 		con.rooms[roomId] = rc
 	} else if _, ok := con.rooms[roomId].roomUsers[userId]; !ok {
-		ruc := RoomUserClients{
-			events: make(map[string]EventClients),
+		ruc := &RoomUserClients{
+			events: make(map[string]*EventClients),
 		}
-		ec := EventClients{
+		ec := &EventClients{
 			clients: make(map[*Client]bool),
 		}
 		ec.clients[c] = true
 		ruc.events[eventName] = ec
 		con.rooms[roomId].roomUsers[userId] = ruc
 	} else if _, ok := con.rooms[roomId].roomUsers[userId].events[eventName]; !ok {
-		ec := EventClients{
+		ec := &EventClients{
 			clients: make(map[*Client]bool),
 		}
 		ec.clients[c] = true
@@ -163,3 +146,48 @@ func (con *Connection) RemoveEvent(userId, roomId, eventName string, c *Client) 
 		delete(con.rooms, roomId)
 	}
 }
+
+func (conn *Connection) ConnectionCount() int {
+	return len(conn.clients)
+}
+
+func (conn *Connection) Users() map[string]*UserClients {
+	return conn.users
+}
+
+func (conn *Connection) Rooms() map[string]*RoomClients {
+	return conn.rooms
+}
+
+func (conn *Connection) EachUserCount() map[string]int {
+	euc := make(map[string]int, len(conn.users))
+	for userID, userClients := range conn.users {
+		euc[userID] = len(userClients.clients)
+	}
+	return euc
+}
+
+// func (conn *Connection) EachRoomCount() map[string]int {
+// 	erc := make(map[string]int, len(conn.rooms))
+// 	for roomID, roomUsers := range conn.rooms {
+// 		erc[roomID] = len(roomUsers.roomUsers)
+// 	}
+// 	return erc
+// }
+
+// func (con *Connection) Info() {
+// hostname, _ := os.Hostname()
+// log.Printf("[WS-INFO][%s] All Clients %d", hostname, len(con.clients))
+// for userId, _ := range con.users {
+// 	log.Printf("[WS-INFO][%s] UserId[%s] %d", hostname, userId, len(con.users[userId].clients))
+// }
+// for roomId, _ := range con.rooms {
+// 	log.Printf("[WS-INFO][%s] RoomId[%s] %d", hostname, roomId, len(con.rooms[roomId].roomUsers))
+// 	for userId, _ := range con.rooms[roomId].roomUsers {
+// 		log.Printf("[WS-INFO][%s] RoomId[%s][%s] %d", hostname, roomId, userId, len(con.rooms[roomId].roomUsers[userId].events))
+// 		for eventName, _ := range con.rooms[roomId].roomUsers[userId].events {
+// 			log.Printf("[WS-INFO][%s] RoomId[%s][%s][%s] %d", hostname, roomId, userId, eventName, len(con.rooms[roomId].roomUsers[userId].events[eventName].clients))
+// 		}
+// 	}
+// }
+// }

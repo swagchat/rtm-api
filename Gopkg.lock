@@ -56,10 +56,28 @@
   version = "v1.2.0"
 
 [[projects]]
+  branch = "master"
+  name = "github.com/mailru/easyjson"
+  packages = [".","buffer","jlexer","jwriter"]
+  revision = "8b799c424f57fa123fc63a99d6383bc6e4c02578"
+
+[[projects]]
   name = "github.com/nsqio/go-nsq"
   packages = ["."]
   revision = "eee57a3ac4174c55924125bb15eeeda8cffb6e6f"
   version = "v1.0.7"
+
+[[projects]]
+  name = "github.com/olivere/elastic"
+  packages = [".","config","uritemplates"]
+  revision = "d78530f6439d6cd674892320b6917d7c4cb25f7f"
+  version = "v6.1.13"
+
+[[projects]]
+  name = "github.com/pkg/errors"
+  packages = ["."]
+  revision = "645ef00459ed84a119197bfb8d8205042c6df63d"
+  version = "v0.8.0"
 
 [[projects]]
   name = "github.com/satori/go.uuid"
@@ -148,6 +166,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "1504ace8b1cb74b5a061cd30194518c0bfce3ee6607d97a68f0fd2592cd9e7e9"
+  inputs-digest = "ea27db7d518e444bb3d65389ba0f7972f9308d869956a4063ca1c97daa9ccc67"
   solver-name = "gps-cdcl"
   solver-version = 1
