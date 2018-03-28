@@ -7,12 +7,13 @@ import (
 
 	"encoding/json"
 	"fmt"
+	"io"
+	"log"
+
 	"github.com/gorilla/websocket"
 	"github.com/swagchat/rtm-api/models"
 	"github.com/swagchat/rtm-api/utils"
 	speechpb "google.golang.org/genproto/googleapis/cloud/speech/v1"
-	"io"
-	"log"
 )
 
 type SpeechClient struct {
@@ -29,7 +30,7 @@ func (c *SpeechClient) ReadPump() {
 		stream.CloseSend()
 		c.Conn.Close()
 	}()
-	c.Conn.SetReadLimit(utils.MAX_MESSAGE_SIZE)
+	c.Conn.SetReadLimit(utils.Config().MaxMessageSize)
 	c.Conn.SetPongHandler(func(string) error { c.Conn.SetReadDeadline(time.Now().Add(pongWait)); return nil })
 
 	//log.Println("ReadPumpSpeech-------start")

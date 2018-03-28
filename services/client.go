@@ -1,10 +1,13 @@
 package services
 
 import (
+	"strings"
 	"time"
 
 	"github.com/gorilla/websocket"
+	"github.com/swagchat/rtm-api/logging"
 	"github.com/swagchat/rtm-api/utils"
+	"go.uber.org/zap/zapcore"
 )
 
 const (
@@ -38,13 +41,21 @@ func (c *Client) ReadPump() {
 	defer func() {
 		c.Conn.Close()
 	}()
-	c.Conn.SetReadLimit(utils.MAX_MESSAGE_SIZE)
+	c.Conn.SetReadLimit(utils.Config().MaxMessageSize)
 	c.Conn.SetReadDeadline(time.Now().Add(pongWait))
 	c.Conn.SetPongHandler(func(string) error { c.Conn.SetReadDeadline(time.Now().Add(pongWait)); return nil })
 	for {
 		rcvData := &RcvData{}
 		err := c.Conn.ReadJSON(&rcvData)
 		if err != nil {
+			pos := strings.LastIndex(err.Error(), "normal")
+			if pos == 0 {
+				logging.Log(zapcore.ErrorLevel, &logging.AppLog{
+					Kind:    "websocket-error",
+					Message: err.Error(),
+				})
+			}
+
 			if websocket.IsUnexpectedCloseError(err, websocket.CloseGoingAway) {
 				c.Conn.Close()
 				Srv.Close <- c
@@ -83,6 +94,10 @@ func (c *Client) WritePump() {
 			c.Conn.SetWriteDeadline(time.Now().Add(writeWait))
 			w, err := c.Conn.NextWriter(websocket.TextMessage)
 			if err != nil {
+				logging.Log(zapcore.ErrorLevel, &logging.AppLog{
+					Kind:    "websocket-error",
+					Message: err.Error(),
+				})
 				return
 			}
 			w.Write(message)
@@ -94,10 +109,18 @@ func (c *Client) WritePump() {
 			}
 
 			if err := w.Close(); err != nil {
+				logging.Log(zapcore.ErrorLevel, &logging.AppLog{
+					Kind:    "websocket-error",
+					Message: err.Error(),
+				})
 				return
 			}
 		case <-ticker.C:
 			if err := c.write(websocket.PingMessage, []byte{}); err != nil {
+				logging.Log(zapcore.ErrorLevel, &logging.AppLog{
+					Kind:    "websocket-error",
+					Message: err.Error(),
+				})
 				return
 			}
 		}

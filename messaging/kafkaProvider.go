@@ -2,26 +2,28 @@ package messaging
 
 import (
 	"fmt"
-	"log"
 	"os"
 	"os/signal"
 	"syscall"
 
 	"github.com/confluentinc/confluent-kafka-go/kafka"
+	"github.com/swagchat/rtm-api/logging"
 	"github.com/swagchat/rtm-api/services"
 	"github.com/swagchat/rtm-api/utils"
+	"go.uber.org/zap/zapcore"
 )
 
 var KafkaConsumer *kafka.Consumer
 
 type KafkaProvider struct{}
 
-func (provider KafkaProvider) Init() error {
-	return nil
-}
+func (provider *KafkaProvider) Subscribe() {
+	logging.Log(zapcore.ErrorLevel, &logging.AppLog{
+		Kind:     "messaging-subscribe",
+		Provider: "kafka",
+	})
 
-func (provider KafkaProvider) Subscribe() {
-	cfg := utils.GetConfig()
+	cfg := utils.Config()
 
 	sigchan := make(chan os.Signal, 1)
 	signal.Notify(sigchan, syscall.SIGINT, syscall.SIGTERM)
@@ -31,23 +33,29 @@ func (provider KafkaProvider) Subscribe() {
 		hostname = utils.CreateUuid()
 	}
 	KafkaConsumer, err := kafka.NewConsumer(&kafka.ConfigMap{
-		"bootstrap.servers": fmt.Sprintf("%s:%s", cfg.Kafka.Host, cfg.Kafka.Port),
+		"bootstrap.servers": fmt.Sprintf("%s:%s", cfg.Messaging.Kafka.Host, cfg.Messaging.Kafka.Port),
 		"group.id":          hostname,
 		// "session.timeout.ms":   6000,
 		// "default.topic.config": kafka.ConfigMap{"auto.offset.reset": "earliest"}
 	})
 
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Failed to create consumer: %s\n", err)
-		os.Exit(1)
+		logging.Log(zapcore.ErrorLevel, &logging.AppLog{
+			Kind:     "messaging-error",
+			Provider: "kafka",
+			Message:  err.Error(),
+		})
 	}
 
 	fmt.Printf("Created Consumer %v\n", KafkaConsumer)
 
-	err = KafkaConsumer.SubscribeTopics([]string{cfg.Kafka.Topic}, nil)
+	err = KafkaConsumer.SubscribeTopics([]string{cfg.Messaging.Kafka.Topic}, nil)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Failed to subscribe topics: %s\n", err)
-		os.Exit(1)
+		logging.Log(zapcore.ErrorLevel, &logging.AppLog{
+			Kind:     "messaging-error",
+			Provider: "kafka",
+			Message:  err.Error(),
+		})
 	}
 
 	run := true
@@ -55,8 +63,12 @@ func (provider KafkaProvider) Subscribe() {
 	for run == true {
 		select {
 		case sig := <-sigchan:
-			fmt.Printf("Caught signal %v: terminating\n", sig)
 			run = false
+			logging.Log(zapcore.InfoLevel, &logging.AppLog{
+				Kind:     "messaging-terminate",
+				Provider: "kafka",
+				Message:  sig.String(),
+			})
 		default:
 			ev := KafkaConsumer.Poll(100)
 			if ev == nil {
@@ -65,24 +77,46 @@ func (provider KafkaProvider) Subscribe() {
 
 			switch e := ev.(type) {
 			case *kafka.Message:
-				fmt.Printf("%% Message on %s:\n%s\n", e.TopicPartition, string(e.Value))
 				services.Srv.Broadcast <- e.Value
+				logging.Log(zapcore.InfoLevel, &logging.AppLog{
+					Kind:     "messaging-receive",
+					Provider: "kafka",
+					Message:  string(e.Value),
+				})
 			case kafka.PartitionEOF:
-				fmt.Printf("%% Reached %v\n", e)
+				logging.Log(zapcore.InfoLevel, &logging.AppLog{
+					Kind:     "messaging-reached",
+					Provider: "kafka",
+					Message:  e.String(),
+				})
 			case kafka.Error:
-				fmt.Fprintf(os.Stderr, "%% Error: %v\n", e)
 				run = false
+				logging.Log(zapcore.ErrorLevel, &logging.AppLog{
+					Kind:     "messaging-error",
+					Provider: "kafka",
+					Message:  e.String(),
+				})
 			default:
-				fmt.Printf("Ignored %v\n", e)
+				logging.Log(zapcore.ErrorLevel, &logging.AppLog{
+					Kind:     "messaging-ignored",
+					Provider: "kafka",
+					Message:  e.String(),
+				})
 			}
 		}
 	}
 
-	fmt.Printf("Closing consumer\n")
 	KafkaConsumer.Close()
+	logging.Log(zapcore.InfoLevel, &logging.AppLog{
+		Kind:     "messaging-close",
+		Provider: "kafka",
+	})
 }
 
-func (provider KafkaProvider) Unsubscribe() {
-	log.Println("kafka Unsubscribe")
+func (provider *KafkaProvider) Unsubscribe() {
+	logging.Log(zapcore.InfoLevel, &logging.AppLog{
+		Kind:     "messaging-unsubscribe",
+		Provider: "kafka",
+	})
 	KafkaConsumer.Unsubscribe()
 }

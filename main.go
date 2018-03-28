@@ -16,21 +16,19 @@ import (
 )
 
 func main() {
-	utils.SetupLogger()
-
 	if utils.IsShowVersion {
 		fmt.Printf("API Version %s\nBuild Version %s\n", utils.APIVersion, utils.BuildVersion)
 		return
 	}
 
-	if utils.GetConfig().Profiling {
+	if utils.Config().Profiling {
 		go func() {
 			http.ListenAndServe("0.0.0.0:6060", nil)
 		}()
 	}
 
-	go metrics.GetMetricsProvider().Run()
-	go messaging.GetMessagingProvider().Subscribe()
+	go metrics.MetricsProvider().Run()
+	go messaging.MessagingProvider().Subscribe()
 	go services.Srv.Run()
 	handlers.StartServer()
 }

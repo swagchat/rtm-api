@@ -6,7 +6,6 @@ import (
 
 	"github.com/swagchat/rtm-api/services"
 	"github.com/swagchat/rtm-api/utils"
-	"go.uber.org/zap"
 )
 
 type Metrics struct {
@@ -24,8 +23,8 @@ type Provider interface {
 	Run()
 }
 
-func GetMetricsProvider() Provider {
-	c := utils.GetConfig()
+func MetricsProvider() Provider {
+	c := utils.Config()
 
 	var provider Provider
 	switch c.Metrics.Provider {
@@ -35,17 +34,12 @@ func GetMetricsProvider() Provider {
 		provider = &StdoutProvider{}
 	case "elasticsearch":
 		provider = &ElasticsearchProvider{}
-	default:
-		utils.AppLogger.Error("",
-			zap.String("msg", "utils.Cfg.MetricsProvider is incorrect"),
-		)
-		os.Exit(0)
 	}
 	return provider
 }
 
 func makeMetrics(nowTime time.Time) *Metrics {
-	c := utils.GetConfig()
+	c := utils.Config()
 	m := &Metrics{}
 
 	hostname, _ := os.Hostname()

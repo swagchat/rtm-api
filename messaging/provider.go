@@ -1,10 +1,7 @@
 package messaging
 
 import (
-	"os"
-
 	"github.com/swagchat/rtm-api/utils"
-	"go.uber.org/zap"
 )
 
 type MessagingInfo struct {
@@ -12,27 +9,21 @@ type MessagingInfo struct {
 }
 
 type Provider interface {
-	Init() error
 	Subscribe()
 	Unsubscribe()
 }
 
-func GetMessagingProvider() Provider {
-	c := utils.GetConfig()
+func MessagingProvider() Provider {
+	c := utils.Config()
 
 	var provider Provider
-	switch c.MessagingProvider {
+	switch c.Messaging.Provider {
 	case "":
-		provider = &NotUseProvider{}
+		provider = &NotuseProvider{}
 	case "kafka":
 		provider = &KafkaProvider{}
 	case "nsq":
 		provider = &NsqProvider{}
-	default:
-		utils.AppLogger.Error("",
-			zap.String("msg", "utils.Cfg.Rtm.Provider is incorrect"),
-		)
-		os.Exit(0)
 	}
 	return provider
 }

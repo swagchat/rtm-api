@@ -14,56 +14,59 @@ const (
 	// AppName is Application name
 	AppName = "rtm-api"
 	// APIVersion is API version
-	APIVersion = "v0"
+	APIVersion = "0"
 	// BuildVersion is API build version
-	BuildVersion = "v0.3.0"
-
-	MAX_MESSAGE_SIZE = 8192
+	BuildVersion = "0.3.0"
 )
 
 var (
-	cfg           *config = NewConfig()
+	cfg           = NewConfig()
 	IsShowVersion bool
 )
 
 type config struct {
-	Version      string
-	HttpPort     string `yaml:"httpPort"`
-	Profiling    bool
-	ErrorLogging bool `yaml:"errorLogging"`
-	Logging      *Logging
-	Realtime     *RealtimeSetting
+	Version         string
+	HTTPPort        string `yaml:"httpPort"`
+	Profiling       bool
+	ErrorLogging    bool `yaml:"errorLogging"`
+	ReadBufferSize  int
+	WriteBufferSize int
+	MaxMessageSize  int64
 
-	MessagingProvider string `yaml:"messagingProvider"`
-	NSQ               *NSQ
-	Kafka             *Kafka
-
-	Metrics *Metrics
+	Logging   *Logging
+	Messaging *Messaging
+	Metrics   *Metrics
 }
 
 type Logging struct {
-	Level string
+	Level         string
+	Elasticsearch struct {
+		URL             string
+		UserID          string `yaml:"userId"`
+		Password        string
+		Index           string
+		IndexTimeFormat string
+		Type            string
+	}
 }
 
-type RealtimeSetting struct {
-	IsDisplayConnectionInfo bool
-}
-
-type NSQ struct {
-	Port           string
-	NsqlookupdHost string
-	NsqlookupdPort string
-	NsqdHost       string
-	NsqdPort       string
-	Topic          string
-	Channel        string
-}
-
-type Kafka struct {
-	Host    string
-	Port    string
-	GroupID string `yaml:"groupId"`
-	Topic   string
+type Messaging struct {
+	Provider string
+	NSQ      struct {
+		Port           string
+		NsqlookupdHost string
+		NsqlookupdPort string
+		NsqdHost       string
+		NsqdPort       string
+		Topic          string
+		Channel        string
+	}
+	Kafka struct {
+		Host    string
+		Port    string
+		GroupID string `yaml:"groupId"`
+		Topic   string
+	}
 }
 
 type Metrics struct {
@@ -74,9 +77,12 @@ type Metrics struct {
 		Interval int
 	}
 	Elasticsearch struct {
-		URL      string
-		UserID   string `yaml:"userId"`
-		Password string
+		URL             string
+		UserID          string `yaml:"userId"`
+		Password        string
+		Index           string
+		IndexTimeFormat string
+		Type            string
 	}
 }
 
@@ -86,37 +92,31 @@ func NewConfig() *config {
 	logging := &Logging{
 		Level: "development",
 	}
-
-	realtimeSetting := &RealtimeSetting{
-		IsDisplayConnectionInfo: true,
-	}
-
-	nsq := &NSQ{}
-	kafka := &Kafka{}
-
+	messaging := &Messaging{}
 	metrics := &Metrics{}
 
 	c := &config{
-		Version:           "0",
-		HttpPort:          "8102",
-		Profiling:         false,
-		ErrorLogging:      false,
-		Logging:           logging,
-		Realtime:          realtimeSetting,
-		MessagingProvider: "",
-		NSQ:               nsq,
-		Kafka:             kafka,
-		Metrics:           metrics,
+		Version:         "0",
+		HTTPPort:        "8102",
+		Profiling:       false,
+		ErrorLogging:    false,
+		ReadBufferSize:  8192,
+		WriteBufferSize: 1024,
+		MaxMessageSize:  8192,
+		Logging:         logging,
+		Messaging:       messaging,
+		Metrics:         metrics,
 	}
 
 	c.LoadYaml()
 	c.LoadEnvironment()
 	c.ParseFlag()
+	c.after()
 
 	return c
 }
 
-func GetConfig() *config {
+func Config() *config {
 	return cfg
 }
 
@@ -129,10 +129,10 @@ func (c *config) LoadEnvironment() {
 	var v string
 
 	if v = os.Getenv("HTTP_PORT"); v != "" {
-		c.HttpPort = v
+		c.HTTPPort = v
 	}
 	if v = os.Getenv("RTM_PORT"); v != "" {
-		c.HttpPort = v
+		c.HTTPPort = v
 	}
 	if v = os.Getenv("RTM_PROFILING"); v != "" {
 		if v == "true" {
@@ -149,54 +149,120 @@ func (c *config) LoadEnvironment() {
 		}
 	}
 
+	if v = os.Getenv("RTM_READ_BUFFER_SIZE"); v != "" {
+		size, _ := strconv.Atoi(v)
+		c.ReadBufferSize = size
+	}
+
+	if v = os.Getenv("RTM_WRITE_BUFFER_SIZE"); v != "" {
+		size, _ := strconv.Atoi(v)
+		c.WriteBufferSize = size
+	}
+
+	if v = os.Getenv("RTM_MAX_MESSAGE_SIZE"); v != "" {
+		size, _ := strconv.ParseInt(v, 10, 64)
+		c.MaxMessageSize = size
+	}
+
 	// Logging
 	if v = os.Getenv("RTM_LOGGING_LEVEL"); v != "" {
 		c.Logging.Level = v
 	}
 
-	if v = os.Getenv("RTM_MESSAGING_PROVIDER"); v != "" {
-		c.MessagingProvider = v
+	// logging elasticsearch
+	if v = os.Getenv("RTM_LOGGING_ELASTICSEARCH_URL"); v != "" {
+		c.Logging.Elasticsearch.URL = v
+	}
+	if v = os.Getenv("RTM_LOGGING_ELASTICSEARCH_USERID"); v != "" {
+		c.Logging.Elasticsearch.UserID = v
+	}
+	if v = os.Getenv("RTM_LOGGING_ELASTICSEARCH_PASSWORD"); v != "" {
+		c.Logging.Elasticsearch.Password = v
+	}
+	if v = os.Getenv("RTM_LOGGING_ELASTICSEARCH_INDEX"); v != "" {
+		c.Logging.Elasticsearch.Index = v
+	}
+	if v = os.Getenv("RTM_LOGGING_ELASTICSEARCH_INDEXTIMEFORMAT"); v != "" {
+		c.Logging.Elasticsearch.IndexTimeFormat = v
+	}
+	if v = os.Getenv("RTM_LOGGING_ELASTICSEARCH_TYPE"); v != "" {
+		c.Logging.Elasticsearch.Type = v
 	}
 
-	// kafka
-	if v = os.Getenv("RTM_KAFKA_HOST"); v != "" {
-		c.Kafka.Host = v
+	// messaging
+	if v = os.Getenv("RTM_MESSAGING_PROVIDER"); v != "" {
+		c.Messaging.Provider = v
 	}
-	if v = os.Getenv("RTM_KAFKA_PORT"); v != "" {
-		c.Kafka.Port = v
+
+	// messaging NSQ
+	if v = os.Getenv("RTM_MESSAGING_NSQ_PORT"); v != "" {
+		c.Messaging.NSQ.Port = v
 	}
-	if v = os.Getenv("RTM_KAFKA_GROUPID"); v != "" {
-		c.Kafka.GroupID = v
+	if v = os.Getenv("RTM_MESSAGING_NSQ_NSQLOOKUPDHOST"); v != "" {
+		c.Messaging.NSQ.NsqlookupdHost = v
 	}
-	if v = os.Getenv("RTM_KAFKA_TOPIC"); v != "" {
-		c.Kafka.Topic = v
+	if v = os.Getenv("RTM_MESSAGING_NSQ_NSQLOOKUPDPORT"); v != "" {
+		c.Messaging.NSQ.NsqlookupdPort = v
+	}
+	if v = os.Getenv("RTM_MESSAGING_NSQ_NSQDHOST"); v != "" {
+		c.Messaging.NSQ.NsqdHost = v
+	}
+	if v = os.Getenv("RTM_MESSAGING_NSQ_NSQDPORT"); v != "" {
+		c.Messaging.NSQ.NsqdPort = v
+	}
+	if v = os.Getenv("RTM_MESSAGING_NSQ_TOPIC"); v != "" {
+		c.Messaging.NSQ.Topic = v
+	}
+	if v = os.Getenv("RTM_MESSAGING_NSQ_CHANNEL"); v != "" {
+		c.Messaging.NSQ.Channel = v
+	}
+
+	// messaging kafka
+	if v = os.Getenv("RTM_MESSAGING_KAFKA_HOST"); v != "" {
+		c.Messaging.Kafka.Host = v
+	}
+	if v = os.Getenv("RTM_MESSAGING_KAFKA_PORT"); v != "" {
+		c.Messaging.Kafka.Port = v
+	}
+	if v = os.Getenv("RTM_MESSAGING_KAFKA_GROUPID"); v != "" {
+		c.Messaging.Kafka.GroupID = v
+	}
+	if v = os.Getenv("RTM_MESSAGING_KAFKA_TOPIC"); v != "" {
+		c.Messaging.Kafka.Topic = v
 	}
 
 	// metrics
 	if v = os.Getenv("RTM_METRICS_PROVIDER"); v != "" {
 		c.Metrics.Provider = v
 	}
-
 	if v = os.Getenv("RTM_METRICS_INTERVAL"); v != "" {
 		interval, _ := strconv.Atoi(v)
 		c.Metrics.Interval = interval
 	}
-
 	if v = os.Getenv("RTM_METRICS_VERBOSE"); v != "" {
 		if v == "true" {
 			c.Metrics.Verbose = true
 		}
 	}
 
-	// elasticsearch
-	if v = os.Getenv("RTM_ELASTICSEARCH_URL"); v != "" {
+	// metrics elasticsearch
+	if v = os.Getenv("RTM_METRICS_ELASTICSEARCH_URL"); v != "" {
 		c.Metrics.Elasticsearch.URL = v
 	}
-	if v = os.Getenv("RTM_ELASTICSEARCH_USERID"); v != "" {
+	if v = os.Getenv("RTM_METRICS_ELASTICSEARCH_USERID"); v != "" {
 		c.Metrics.Elasticsearch.UserID = v
 	}
-	if v = os.Getenv("RTM_ELASTICSEARCH_PASSWORD"); v != "" {
+	if v = os.Getenv("RTM_METRICS_ELASTICSEARCH_PASSWORD"); v != "" {
 		c.Metrics.Elasticsearch.Password = v
+	}
+	if v = os.Getenv("RTM_METRICS_ELASTICSEARCH_INDEX"); v != "" {
+		c.Metrics.Elasticsearch.Index = v
+	}
+	if v = os.Getenv("RTM_METRICS_ELASTICSEARCH_INDEXTIMEFORMAT"); v != "" {
+		c.Metrics.Elasticsearch.IndexTimeFormat = v
+	}
+	if v = os.Getenv("RTM_METRICS_ELASTICSEARCH_TYPE"); v != "" {
+		c.Metrics.Elasticsearch.Type = v
 	}
 }
 
@@ -204,51 +270,84 @@ func (c *config) ParseFlag() {
 	flag.BoolVar(&IsShowVersion, "v", false, "")
 	flag.BoolVar(&IsShowVersion, "version", false, "show version")
 
-	flag.StringVar(&c.HttpPort, "httpPort", c.HttpPort, "")
+	flag.StringVar(&c.HTTPPort, "httpPort", c.HTTPPort, "")
 
 	var profiling string
 	flag.StringVar(&profiling, "profiling", "", "")
 
-	var demoPage string
-	flag.StringVar(&demoPage, "demoPage", "", "false")
-
 	var errorLogging string
 	flag.StringVar(&errorLogging, "errorLogging", "", "false")
+
+	flag.IntVar(&c.ReadBufferSize, "readBufferSize", c.ReadBufferSize, "")
+	flag.IntVar(&c.WriteBufferSize, "writeBufferSize", c.WriteBufferSize, "")
+	flag.Int64Var(&c.MaxMessageSize, "maxMessageSize", c.MaxMessageSize, "")
 
 	// Logging
 	flag.StringVar(&c.Logging.Level, "logging.level", c.Logging.Level, "")
 
-	// kafka
-	flag.StringVar(&c.Kafka.Host, "kafka.host", c.Kafka.Host, "")
-	flag.StringVar(&c.Kafka.Port, "kafka.port", c.Kafka.Port, "")
-	flag.StringVar(&c.Kafka.GroupID, "kafka.groupId", c.Kafka.GroupID, "")
-	flag.StringVar(&c.Kafka.Topic, "kafka.topic", c.Kafka.Topic, "")
+	// logging elasticsearch
+	flag.StringVar(&c.Logging.Elasticsearch.URL, "logging.elasticsearch.url", c.Logging.Elasticsearch.URL, "")
+	flag.StringVar(&c.Logging.Elasticsearch.UserID, "logging.elasticsearch.userId", c.Logging.Elasticsearch.UserID, "")
+	flag.StringVar(&c.Logging.Elasticsearch.Password, "logging.elasticsearch.password", c.Logging.Elasticsearch.Password, "")
+	flag.StringVar(&c.Logging.Elasticsearch.Index, "logging.elasticsearch.index", c.Logging.Elasticsearch.Index, "")
+	flag.StringVar(&c.Logging.Elasticsearch.IndexTimeFormat, "logging.elasticsearch.indexTimeFormat", c.Logging.Elasticsearch.IndexTimeFormat, "")
+	flag.StringVar(&c.Logging.Elasticsearch.Type, "logging.elasticsearch.type", c.Logging.Elasticsearch.Type, "")
+
+	// messaging
+	flag.StringVar(&c.Messaging.Provider, "messaging.provider", c.Messaging.Provider, "")
+
+	// messaging NSQ
+	flag.StringVar(&c.Messaging.NSQ.NsqlookupdHost, "messaging.nsq.nsqlookupdHost", c.Messaging.NSQ.NsqlookupdHost, "Host name of nsqlookupd")
+	flag.StringVar(&c.Messaging.NSQ.NsqlookupdPort, "messaging.nsq.nsqlookupdPort", c.Messaging.NSQ.NsqlookupdPort, "Port no of nsqlookupd")
+	flag.StringVar(&c.Messaging.NSQ.NsqdHost, "messaging.nsq.nsqdHost", c.Messaging.NSQ.NsqdHost, "Host name of nsqd")
+	flag.StringVar(&c.Messaging.NSQ.NsqdPort, "messaging.nsq.nsqdPort", c.Messaging.NSQ.NsqdPort, "Port no of nsqd")
+	flag.StringVar(&c.Messaging.NSQ.Topic, "messaging.nsq.topic", c.Messaging.NSQ.Topic, "Topic name")
+	flag.StringVar(&c.Messaging.NSQ.Channel, "messaging.nsq.channel", c.Messaging.NSQ.Channel, "Channel name. If it's not set, channel is hostname.")
+
+	// messaging kafka
+	flag.StringVar(&c.Messaging.Kafka.Host, "messaging.kafka.host", c.Messaging.Kafka.Host, "")
+	flag.StringVar(&c.Messaging.Kafka.Port, "messaging.kafka.port", c.Messaging.Kafka.Port, "")
+	flag.StringVar(&c.Messaging.Kafka.GroupID, "messaging.kafka.groupId", c.Messaging.Kafka.GroupID, "")
+	flag.StringVar(&c.Messaging.Kafka.Topic, "messaging.kafka.topic", c.Messaging.Kafka.Topic, "")
 
 	// metrics
 	flag.StringVar(&c.Metrics.Provider, "metrics.provider", c.Metrics.Provider, "")
 	flag.IntVar(&c.Metrics.Interval, "metrics.interval", c.Metrics.Interval, "")
 	flag.BoolVar(&c.Metrics.Verbose, "metrics.verbose", c.Metrics.Verbose, "")
 
-	// elasticsearch
-	flag.StringVar(&c.Metrics.Elasticsearch.URL, "elasticsearch.url", c.Metrics.Elasticsearch.URL, "")
-	flag.StringVar(&c.Metrics.Elasticsearch.UserID, "elasticsearch.userId", c.Metrics.Elasticsearch.UserID, "")
-	flag.StringVar(&c.Metrics.Elasticsearch.Password, "elasticsearch.password", c.Metrics.Elasticsearch.Password, "")
+	// metrics elasticsearch
+	flag.StringVar(&c.Metrics.Elasticsearch.URL, "metrics.elasticsearch.url", c.Metrics.Elasticsearch.URL, "")
+	flag.StringVar(&c.Metrics.Elasticsearch.UserID, "metrics.elasticsearch.userId", c.Metrics.Elasticsearch.UserID, "")
+	flag.StringVar(&c.Metrics.Elasticsearch.Password, "metrics.elasticsearch.password", c.Metrics.Elasticsearch.Password, "")
+	flag.StringVar(&c.Metrics.Elasticsearch.Index, "metrics.elasticsearch.index", c.Metrics.Elasticsearch.Index, "")
+	flag.StringVar(&c.Metrics.Elasticsearch.IndexTimeFormat, "metrics.elasticsearch.indexTimeFormat", c.Metrics.Elasticsearch.IndexTimeFormat, "")
+	flag.StringVar(&c.Metrics.Elasticsearch.Type, "metrics.elasticsearch.type", c.Metrics.Elasticsearch.Type, "")
 
-	var isDisplayConnectionInfo string
-	flag.StringVar(&isDisplayConnectionInfo, "isDisplayConnectionInfo", "", "Display connection info.")
-	if profiling == "true" {
-		c.Realtime.IsDisplayConnectionInfo = true
-	} else if profiling == "false" {
-		c.Realtime.IsDisplayConnectionInfo = false
+	flag.Parse()
+}
+
+func (c *config) after() {
+	if c.Logging.Elasticsearch.URL != "" {
+		if c.Logging.Elasticsearch.Index == "" {
+			c.Logging.Elasticsearch.Index = AppName
+		}
+		if c.Logging.Elasticsearch.IndexTimeFormat == "" {
+			c.Logging.Elasticsearch.IndexTimeFormat = "2006.01.02"
+		}
+		if c.Logging.Elasticsearch.Type == "" {
+			c.Logging.Elasticsearch.Type = "app-log"
+		}
 	}
 
-	flag.StringVar(&c.MessagingProvider, "messagingProvider", c.MessagingProvider, "")
-
-	flag.StringVar(&c.NSQ.NsqlookupdHost, "nsqlookupdHost", c.NSQ.NsqlookupdHost, "Host name of nsqlookupd")
-	flag.StringVar(&c.NSQ.NsqlookupdPort, "nsqlookupdPort", c.NSQ.NsqlookupdPort, "Port no of nsqlookupd")
-	flag.StringVar(&c.NSQ.NsqdHost, "nsqdHost", c.NSQ.NsqdHost, "Host name of nsqd")
-	flag.StringVar(&c.NSQ.NsqdPort, "nsqdPort", c.NSQ.NsqdPort, "Port no of nsqd")
-	flag.StringVar(&c.NSQ.Topic, "topic", c.NSQ.Topic, "Topic name")
-	flag.StringVar(&c.NSQ.Channel, "channel", c.NSQ.Channel, "Channel name. If it's not set, channel is hostname.")
-	flag.Parse()
+	if c.Metrics.Provider == "elasticsearch" {
+		if c.Metrics.Elasticsearch.Index == "" {
+			c.Metrics.Elasticsearch.Index = AppName
+		}
+		if c.Metrics.Elasticsearch.IndexTimeFormat == "" {
+			c.Metrics.Elasticsearch.IndexTimeFormat = "2006.01.02"
+		}
+		if c.Metrics.Elasticsearch.Type == "" {
+			c.Metrics.Elasticsearch.Type = "metrics"
+		}
+	}
 }

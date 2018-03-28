@@ -1,11 +1,9 @@
 package handlers
 
 import (
-	//"context"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
-	"log"
 	"net/http"
 	"net/url"
 	"os"
@@ -17,15 +15,15 @@ import (
 	"github.com/go-zoo/bone"
 	"github.com/gorilla/websocket"
 	"github.com/shogo82148/go-gracedown"
+	"github.com/swagchat/rtm-api/logging"
 	"github.com/swagchat/rtm-api/messaging"
 	"github.com/swagchat/rtm-api/services"
 	"github.com/swagchat/rtm-api/utils"
-	"go.uber.org/zap"
-	//"time"
+	"go.uber.org/zap/zapcore"
 )
 
 var (
-	allowedMethods []string = []string{
+	allowedMethods = []string{
 		"POST",
 		"GET",
 		"OPTIONS",
@@ -33,12 +31,14 @@ var (
 		"PATCH",
 		"DELETE",
 	}
-	NoBodyStatusCodes []int = []int{
+
+	noBodyStatusCodes = []int{
 		http.StatusNotFound,
 		http.StatusConflict,
 	}
 )
 
+// StartServer is HTTP Server
 func StartServer() {
 	mux := bone.New()
 	mux.GetFunc("/", indexHandler)
@@ -51,29 +51,31 @@ func StartServer() {
 
 	signalChan := make(chan os.Signal)
 	signal.Notify(signalChan, syscall.SIGTERM, syscall.SIGINT)
-	mp := messaging.GetMessagingProvider()
+
 	go func() {
 		for {
 			s := <-signalChan
 			if s == syscall.SIGTERM || s == syscall.SIGINT {
-				log.Println("msg", "Swagchat Realtime Shutdown start!")
-				mp.Unsubscribe()
+				logging.Log(zapcore.InfoLevel, &logging.AppLog{
+					Kind:    "handler",
+					Message: fmt.Sprintf("%s graceful down by signal[%s]", utils.AppName, s.String()),
+				})
+				messaging.MessagingProvider().Unsubscribe()
 				gracedown.Close()
 			}
 		}
 	}()
 
-	c := utils.GetConfig()
+	c := utils.Config()
 	sb := utils.NewStringBuilder()
-	s := sb.PrintStruct("config", c)
-	utils.AppLogger.Info("",
-		zap.String("msg", fmt.Sprintf("%s Start!", utils.AppName)),
-		zap.String("config", s),
-	)
+	cfgStr := sb.PrintStruct("config", c)
+	logging.Log(zapcore.InfoLevel, &logging.AppLog{
+		Kind:    "handler",
+		Message: fmt.Sprintf("%s start", utils.AppName),
+		Config:  cfgStr,
+	})
 
-	if err := gracedown.ListenAndServe(fmt.Sprintf(":%s", c.HttpPort), mux); err != nil {
-		log.Fatal("ListenAndServe: ", err)
-	}
+	gracedown.ListenAndServe(fmt.Sprintf(":%s", c.HTTPPort), mux)
 }
 
 func indexHandler(w http.ResponseWriter, r *http.Request) {
@@ -81,10 +83,12 @@ func indexHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func messageHandler(w http.ResponseWriter, r *http.Request) {
-	log.Println("--- messageHandler ---")
 	message, err := ioutil.ReadAll(r.Body)
 	if err != nil {
-		log.Println(err)
+		logging.Log(zapcore.ErrorLevel, &logging.AppLog{
+			Kind:    "handler-error",
+			Message: err.Error(),
+		})
 	}
 	services.Srv.Broadcast <- message
 }
@@ -92,7 +96,10 @@ func messageHandler(w http.ResponseWriter, r *http.Request) {
 func websocketHandler(w http.ResponseWriter, r *http.Request) {
 	conn, err := upgrader.Upgrade(w, r, nil)
 	if err != nil {
-		log.Println(err)
+		logging.Log(zapcore.ErrorLevel, &logging.AppLog{
+			Kind:    "handler-error",
+			Message: err.Error(),
+		})
 		return
 	}
 
@@ -102,8 +109,8 @@ func websocketHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	params, _ := url.ParseQuery(r.URL.RawQuery)
-	if userIdSlice, ok := params["userId"]; ok {
-		c.UserId = userIdSlice[0]
+	if userIDSlice, ok := params["userId"]; ok {
+		c.UserId = userIDSlice[0]
 	}
 
 	services.Srv.Connection.AddClient(c)
@@ -114,7 +121,10 @@ func websocketHandler(w http.ResponseWriter, r *http.Request) {
 func speechHandler(w http.ResponseWriter, r *http.Request) {
 	conn, err := speechUpgrader.Upgrade(w, r, nil)
 	if err != nil {
-		log.Println(err)
+		logging.Log(zapcore.ErrorLevel, &logging.AppLog{
+			Kind:    "handler-error",
+			Message: err.Error(),
+		})
 		return
 	}
 
@@ -133,34 +143,39 @@ func speechHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 var upgrader = websocket.Upgrader{
-	ReadBufferSize:  utils.MAX_MESSAGE_SIZE,
-	WriteBufferSize: 1024,
+	ReadBufferSize:  utils.Config().ReadBufferSize,
+	WriteBufferSize: utils.Config().WriteBufferSize,
 	CheckOrigin: func(r *http.Request) bool {
 		return true
 	},
 }
 
 var speechUpgrader = websocket.Upgrader{
-	ReadBufferSize:  utils.MAX_MESSAGE_SIZE,
-	WriteBufferSize: 1024,
+	ReadBufferSize:  utils.Config().ReadBufferSize,
+	WriteBufferSize: utils.Config().WriteBufferSize,
 	CheckOrigin: func(r *http.Request) bool {
 		return true
 	},
 }
 
-func optionsHandler(w http.ResponseWriter, r *http.Request) {
-	log.Println("options")
-	log.Println(r.Header.Get("Access-Control-Request-Headers"))
+func colsHandler(fn http.HandlerFunc) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		optionsHandler(w, r)
+		fn(w, r)
+	}
+}
 
-	origin := r.Header.Get("Origin")
-	if origin != "" {
-		log.Println(origin)
-		w.Header().Set("Access-Control-Allow-Origin", origin)
+func optionsHandler(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Access-Control-Allow-Origin", "*")
+	rHeaders := make([]string, 0, len(r.Header))
+	for k, v := range r.Header {
+		rHeaders = append(rHeaders, k)
+		if k == "Access-Control-Request-Headers" {
+			rHeaders = append(rHeaders, strings.Join(v, ", "))
+		}
 	}
-	if r.Method == "OPTIONS" {
-		w.Header().Set("Access-Control-Allow-Methods", strings.Join(allowedMethods, ", "))
-		w.Header().Set("Access-Control-Allow-Headers", r.Header.Get("Access-Control-Request-Headers"))
-	}
+	w.Header().Set("Access-Control-Allow-Methods", strings.Join(allowedMethods, ", "))
+	w.Header().Set("Access-Control-Allow-Headers", strings.Join(rHeaders, ", "))
 }
 
 func notFoundHandler(w http.ResponseWriter, r *http.Request) {
@@ -176,7 +191,7 @@ func respond(w http.ResponseWriter, r *http.Request, status int, contentType str
 		w.Header().Set("Content-Type", contentType)
 	}
 	w.WriteHeader(status)
-	for _, v := range NoBodyStatusCodes {
+	for _, v := range noBodyStatusCodes {
 		if status == v {
 			data = nil
 		}

@@ -3,20 +3,25 @@ package metrics
 import (
 	"context"
 	"fmt"
-	"log"
 	"time"
 
 	"github.com/olivere/elastic"
+	"github.com/swagchat/rtm-api/logging"
 	"github.com/swagchat/rtm-api/utils"
+	"go.uber.org/zap/zapcore"
 )
 
 type ElasticsearchProvider struct{}
 
 func (provider *ElasticsearchProvider) Run() {
-	c := utils.GetConfig()
+	c := utils.Config()
 	client, err := elastic.NewClient(elastic.SetURL(c.Metrics.Elasticsearch.URL))
 	if err != nil {
-		log.Println(err)
+		logging.Log(zapcore.ErrorLevel, &logging.AppLog{
+			Kind:     "metrics-error",
+			Provider: "elasticsearch",
+			Message:  err.Error(),
+		})
 	}
 
 	exec(func() {
@@ -24,12 +29,16 @@ func (provider *ElasticsearchProvider) Run() {
 		nowTime := time.Unix(time.Now().Unix(), 0).In(l)
 		m := makeMetrics(nowTime)
 		_, err := client.Index().
-			Index(fmt.Sprintf("%s-%s", utils.AppName, nowTime.Format("2006.01.02"))).
-			Type("metrics").
+			Index(fmt.Sprintf("%s-%s", c.Metrics.Elasticsearch.Index, nowTime.Format(c.Metrics.Elasticsearch.IndexTimeFormat))).
+			Type(c.Metrics.Elasticsearch.Type).
 			BodyJson(m).
 			Do(context.Background())
 		if err != nil {
-			log.Println(err)
+			logging.Log(zapcore.ErrorLevel, &logging.AppLog{
+				Kind:     "metrics-error",
+				Provider: "elasticsearch",
+				Message:  err.Error(),
+			})
 		}
 	}, c.Metrics.Interval)
 }

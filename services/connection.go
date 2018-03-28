@@ -1,8 +1,10 @@
 package services
 
 import (
-	"log"
-	"os"
+	"fmt"
+
+	"github.com/swagchat/rtm-api/logging"
+	"go.uber.org/zap/zapcore"
 )
 
 type Connection struct {
@@ -32,8 +34,11 @@ func (con *Connection) AddClient(c *Client) {
 		return
 	}
 
-	hostname, _ := os.Hostname()
-	log.Printf("[WS-INFO][%s] ADD CLIENT %p", hostname, c)
+	logging.Log(zapcore.InfoLevel, &logging.AppLog{
+		Kind:   "add-client",
+		UserID: c.UserId,
+		Client: fmt.Sprintf("%p", c.Conn),
+	})
 
 	con.clients[c] = true
 
@@ -55,6 +60,12 @@ func (con *Connection) RemoveClient(c *Client) {
 	}
 
 	delete(con.clients, c)
+
+	logging.Log(zapcore.InfoLevel, &logging.AppLog{
+		Kind:   "delete-client",
+		UserID: c.UserId,
+		Client: fmt.Sprintf("%p", c.Conn),
+	})
 
 	for client, _ := range con.users[c.UserId].clients {
 		if client == c {
@@ -85,7 +96,6 @@ func (con *Connection) RemoveClient(c *Client) {
 			delete(con.rooms, roomId)
 		}
 	}
-
 }
 
 func (con *Connection) AddEvent(userId, roomId, eventName string, c *Client) {
@@ -166,14 +176,6 @@ func (conn *Connection) EachUserCount() map[string]int {
 	}
 	return euc
 }
-
-// func (conn *Connection) EachRoomCount() map[string]int {
-// 	erc := make(map[string]int, len(conn.rooms))
-// 	for roomID, roomUsers := range conn.rooms {
-// 		erc[roomID] = len(roomUsers.roomUsers)
-// 	}
-// 	return erc
-// }
 
 // func (con *Connection) Info() {
 // hostname, _ := os.Hostname()

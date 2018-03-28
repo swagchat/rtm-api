@@ -1,25 +1,21 @@
 package messaging
 
 import (
-	"fmt"
-	"log"
 	"net/http"
 	"os"
 	"reflect"
 	"unsafe"
 
 	nsq "github.com/nsqio/go-nsq"
+	"github.com/swagchat/rtm-api/logging"
 	"github.com/swagchat/rtm-api/services"
 	"github.com/swagchat/rtm-api/utils"
+	"go.uber.org/zap/zapcore"
 )
 
 var NSQConsumer *nsq.Consumer
 
 type NsqProvider struct{}
-
-func (provider NsqProvider) Init() error {
-	return nil
-}
 
 func b2s(b []byte) string {
 	bh := (*reflect.SliceHeader)(unsafe.Pointer(&b))
@@ -27,41 +23,48 @@ func b2s(b []byte) string {
 	return *(*string)(unsafe.Pointer(&sh))
 }
 
-func hello(s string) {
-	fmt.Println(s)
-}
-
-func (provider NsqProvider) Subscribe() {
-	c := utils.GetConfig()
-	if c.NSQ.NsqlookupdHost != "" {
+func (provider *NsqProvider) Subscribe() {
+	c := utils.Config()
+	if c.Messaging.NSQ.NsqlookupdHost != "" {
 		config := nsq.NewConfig()
-		channel := c.NSQ.Channel
+		channel := c.Messaging.NSQ.Channel
 		hostname, err := os.Hostname()
 		if err == nil {
 			config.Hostname = hostname
 			channel = hostname
 		}
-		NSQConsumer, _ = nsq.NewConsumer(c.NSQ.Topic, channel, config)
+		NSQConsumer, _ = nsq.NewConsumer(c.Messaging.NSQ.Topic, channel, config)
 		NSQConsumer.AddHandler(nsq.HandlerFunc(func(message *nsq.Message) error {
-			log.Printf("[NSQ]Got a message: %v", message)
 			services.Srv.Broadcast <- message.Body
+			logging.Log(zapcore.InfoLevel, &logging.AppLog{
+				Kind:     "messaging-receive",
+				Provider: "nsq",
+				Message:  string(message.Body),
+			})
 			return nil
 		}))
-		err = NSQConsumer.ConnectToNSQLookupd(c.NSQ.NsqlookupdHost + ":" + c.NSQ.NsqlookupdPort)
+		err = NSQConsumer.ConnectToNSQLookupd(c.Messaging.NSQ.NsqlookupdHost + ":" + c.Messaging.NSQ.NsqlookupdPort)
 		if err != nil {
-			log.Panic("Could not connect")
+			logging.Log(zapcore.ErrorLevel, &logging.AppLog{
+				Kind:     "messaging-error",
+				Provider: "nsq",
+				Message:  err.Error(),
+			})
 		}
 	}
 }
 
-func (provider NsqProvider) Unsubscribe() {
+func (provider *NsqProvider) Unsubscribe() {
 	if NSQConsumer != nil {
-		c := utils.GetConfig()
+		c := utils.Config()
 		hostname, err := os.Hostname()
-		resp, err := http.Post("http://"+c.NSQ.NsqdHost+":"+c.NSQ.NsqdPort+"/channel/delete?topic="+c.NSQ.Topic+"&channel="+hostname, "text/plain", nil)
+		_, err = http.Post("http://"+c.Messaging.NSQ.NsqdHost+":"+c.Messaging.NSQ.NsqdPort+"/channel/delete?topic="+c.Messaging.NSQ.Topic+"&channel="+hostname, "text/plain", nil)
 		if err != nil {
-			log.Println(err)
+			logging.Log(zapcore.ErrorLevel, &logging.AppLog{
+				Kind:     "messaging-error",
+				Provider: "nsq",
+				Message:  err.Error(),
+			})
 		}
-		log.Println(resp)
 	}
 }

@@ -1,13 +1,11 @@
 package messaging
 
-type NotUseProvider struct{}
+type NotuseProvider struct{}
 
-func (provider NotUseProvider) Init() error {
-	return nil
+func (provider *NotuseProvider) Subscribe() {
+	// Do not process anything
 }
 
-func (provider NotUseProvider) Subscribe() {
-}
-
-func (provider NotUseProvider) Unsubscribe() {
+func (provider *NotuseProvider) Unsubscribe() {
+	// Do not process anything
 }

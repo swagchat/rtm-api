@@ -2,10 +2,11 @@ package services
 
 import (
 	"encoding/json"
-	"log"
-	"os"
+	"fmt"
 
+	"github.com/swagchat/rtm-api/logging"
 	"github.com/swagchat/rtm-api/models"
+	"go.uber.org/zap/zapcore"
 )
 
 var Srv *Server = NewServer()
@@ -40,30 +41,43 @@ func GetServer() *Server {
 }
 
 func (s *Server) Run() {
-	hostname, _ := os.Hostname()
-
 	for {
 		select {
 		case rcvData := <-s.Register:
 			// Register event
-			log.Printf("[WS-INFO][%s] REGISTER [%s][%s][%s] %p", hostname, rcvData.RoomId, rcvData.UserId, rcvData.EventName, rcvData.Client)
+			logging.Log(zapcore.InfoLevel, &logging.AppLog{
+				Kind:   "register",
+				UserID: rcvData.UserId,
+				RoomID: rcvData.RoomId,
+				Event:  rcvData.EventName,
+				Client: fmt.Sprintf("%p", rcvData.Client.Conn),
+			})
+
 			s.Connection.clients[rcvData.Client] = true
 			s.Connection.AddEvent(rcvData.UserId, rcvData.RoomId, rcvData.EventName, rcvData.Client)
 
 		case rcvData := <-s.Unregister:
 			// Unregister event
-			log.Printf("[WS-INFO][%s] UNREGISTER [%s][%s][%s] %p", hostname, rcvData.RoomId, rcvData.UserId, rcvData.EventName, rcvData.Client)
+			logging.Log(zapcore.InfoLevel, &logging.AppLog{
+				Kind:   "unregister",
+				UserID: rcvData.UserId,
+				RoomID: rcvData.RoomId,
+				Event:  rcvData.EventName,
+				Client: fmt.Sprintf("%p", rcvData.Client.Conn),
+			})
 			s.Connection.RemoveEvent(rcvData.UserId, rcvData.RoomId, rcvData.EventName, rcvData.Client)
 
 		case c := <-s.Close:
 			// Socket close
-			log.Printf("[WS-INFO][%s] CLOSE UserId[%s]", hostname, c.UserId)
 			s.Connection.RemoveClient(c)
 			close(c.Send)
 
 		case message := <-s.Broadcast:
 			// Broadcast message
-			log.Printf("[WS-INFO][%s] BROADCAST [%s]", hostname, string(message))
+			logging.Log(zapcore.InfoLevel, &logging.AppLog{
+				Kind:    "bloadcast",
+				Message: string(message),
+			})
 			s.broadcast(message)
 		}
 	}
@@ -79,7 +93,6 @@ func (s *Server) broadcast(message []byte) {
 
 	for _, roomUser := range s.Connection.rooms[messageMap.RoomId].roomUsers {
 		for conn, _ := range roomUser.events[messageMap.EventName].clients {
-			log.Printf("------> %p", conn)
 			select {
 			case conn.Send <- message:
 			default:
