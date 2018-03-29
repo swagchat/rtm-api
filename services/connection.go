@@ -35,9 +35,11 @@ func (con *Connection) AddClient(c *Client) {
 	}
 
 	logging.Log(zapcore.InfoLevel, &logging.AppLog{
-		Kind:   "add-client",
-		UserID: c.UserId,
-		Client: fmt.Sprintf("%p", c.Conn),
+		Kind:      "add-client",
+		UserID:    c.UserId,
+		Client:    fmt.Sprintf("%p", c.Conn),
+		Useragent: c.Useragent,
+		IPAddress: c.IPAddress,
 	})
 
 	con.clients[c] = true

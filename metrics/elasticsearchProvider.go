@@ -18,7 +18,7 @@ func (provider *ElasticsearchProvider) Run() {
 	client, err := elastic.NewClient(elastic.SetURL(c.Metrics.Elasticsearch.URL))
 	if err != nil {
 		logging.Log(zapcore.ErrorLevel, &logging.AppLog{
-			Kind:     "metrics-error",
+			Kind:     "metrics",
 			Provider: "elasticsearch",
 			Message:  err.Error(),
 		})
@@ -35,7 +35,7 @@ func (provider *ElasticsearchProvider) Run() {
 			Do(context.Background())
 		if err != nil {
 			logging.Log(zapcore.ErrorLevel, &logging.AppLog{
-				Kind:     "metrics-error",
+				Kind:     "metrics",
 				Provider: "elasticsearch",
 				Message:  err.Error(),
 			})

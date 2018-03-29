@@ -22,10 +22,13 @@ var (
 )
 
 type Client struct {
-	Conn    *websocket.Conn
-	Send    chan []byte
-	RoomIds []string
-	UserId  string
+	Conn      *websocket.Conn
+	Send      chan []byte
+	RoomIds   []string
+	UserId    string
+	Useragent string
+	IPAddress string
+	Language  string
 }
 
 type RcvData struct {
@@ -51,7 +54,7 @@ func (c *Client) ReadPump() {
 			pos := strings.LastIndex(err.Error(), "normal")
 			if pos == 0 {
 				logging.Log(zapcore.ErrorLevel, &logging.AppLog{
-					Kind:    "websocket-error",
+					Kind:    "websocket",
 					Message: err.Error(),
 				})
 			}
@@ -95,7 +98,7 @@ func (c *Client) WritePump() {
 			w, err := c.Conn.NextWriter(websocket.TextMessage)
 			if err != nil {
 				logging.Log(zapcore.ErrorLevel, &logging.AppLog{
-					Kind:    "websocket-error",
+					Kind:    "websocket",
 					Message: err.Error(),
 				})
 				return
@@ -110,7 +113,7 @@ func (c *Client) WritePump() {
 
 			if err := w.Close(); err != nil {
 				logging.Log(zapcore.ErrorLevel, &logging.AppLog{
-					Kind:    "websocket-error",
+					Kind:    "websocket",
 					Message: err.Error(),
 				})
 				return
@@ -118,7 +121,7 @@ func (c *Client) WritePump() {
 		case <-ticker.C:
 			if err := c.write(websocket.PingMessage, []byte{}); err != nil {
 				logging.Log(zapcore.ErrorLevel, &logging.AppLog{
-					Kind:    "websocket-error",
+					Kind:    "websocket",
 					Message: err.Error(),
 				})
 				return

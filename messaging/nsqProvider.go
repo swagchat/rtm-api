@@ -1,6 +1,7 @@
 package messaging
 
 import (
+	"fmt"
 	"net/http"
 	"os"
 	"reflect"
@@ -33,11 +34,24 @@ func (provider *NsqProvider) Subscribe() {
 			config.Hostname = hostname
 			channel = hostname
 		}
-		NSQConsumer, _ = nsq.NewConsumer(c.Messaging.NSQ.Topic, channel, config)
+		NSQConsumer, err = nsq.NewConsumer(c.Messaging.NSQ.Topic, channel, config)
+		if err != nil {
+			logging.Log(zapcore.ErrorLevel, &logging.AppLog{
+				Kind:     "messaging-subscribe",
+				Provider: "nsq",
+				Message:  err.Error(),
+			})
+		} else {
+			logging.Log(zapcore.InfoLevel, &logging.AppLog{
+				Kind:     "messaging-subscribe",
+				Provider: "nsq",
+				Message:  fmt.Sprintf("%p", NSQConsumer),
+			})
+		}
 		NSQConsumer.AddHandler(nsq.HandlerFunc(func(message *nsq.Message) error {
 			services.Srv.Broadcast <- message.Body
 			logging.Log(zapcore.InfoLevel, &logging.AppLog{
-				Kind:     "messaging-receive",
+				Kind:     "messaging-subscribe-receive",
 				Provider: "nsq",
 				Message:  string(message.Body),
 			})
@@ -46,7 +60,7 @@ func (provider *NsqProvider) Subscribe() {
 		err = NSQConsumer.ConnectToNSQLookupd(c.Messaging.NSQ.NsqlookupdHost + ":" + c.Messaging.NSQ.NsqlookupdPort)
 		if err != nil {
 			logging.Log(zapcore.ErrorLevel, &logging.AppLog{
-				Kind:     "messaging-error",
+				Kind:     "messaging-subscribe",
 				Provider: "nsq",
 				Message:  err.Error(),
 			})

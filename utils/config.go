@@ -2,6 +2,7 @@ package utils
 
 import (
 	"flag"
+	"fmt"
 	"io/ioutil"
 	"log"
 	"os"
@@ -39,15 +40,7 @@ type config struct {
 }
 
 type Logging struct {
-	Level         string
-	Elasticsearch struct {
-		URL             string
-		UserID          string `yaml:"userId"`
-		Password        string
-		Index           string
-		IndexTimeFormat string
-		Type            string
-	}
+	Level string
 }
 
 type Messaging struct {
@@ -169,26 +162,6 @@ func (c *config) LoadEnvironment() {
 		c.Logging.Level = v
 	}
 
-	// logging elasticsearch
-	if v = os.Getenv("RTM_LOGGING_ELASTICSEARCH_URL"); v != "" {
-		c.Logging.Elasticsearch.URL = v
-	}
-	if v = os.Getenv("RTM_LOGGING_ELASTICSEARCH_USERID"); v != "" {
-		c.Logging.Elasticsearch.UserID = v
-	}
-	if v = os.Getenv("RTM_LOGGING_ELASTICSEARCH_PASSWORD"); v != "" {
-		c.Logging.Elasticsearch.Password = v
-	}
-	if v = os.Getenv("RTM_LOGGING_ELASTICSEARCH_INDEX"); v != "" {
-		c.Logging.Elasticsearch.Index = v
-	}
-	if v = os.Getenv("RTM_LOGGING_ELASTICSEARCH_INDEXTIMEFORMAT"); v != "" {
-		c.Logging.Elasticsearch.IndexTimeFormat = v
-	}
-	if v = os.Getenv("RTM_LOGGING_ELASTICSEARCH_TYPE"); v != "" {
-		c.Logging.Elasticsearch.Type = v
-	}
-
 	// messaging
 	if v = os.Getenv("RTM_MESSAGING_PROVIDER"); v != "" {
 		c.Messaging.Provider = v
@@ -285,14 +258,6 @@ func (c *config) ParseFlag() {
 	// Logging
 	flag.StringVar(&c.Logging.Level, "logging.level", c.Logging.Level, "")
 
-	// logging elasticsearch
-	flag.StringVar(&c.Logging.Elasticsearch.URL, "logging.elasticsearch.url", c.Logging.Elasticsearch.URL, "")
-	flag.StringVar(&c.Logging.Elasticsearch.UserID, "logging.elasticsearch.userId", c.Logging.Elasticsearch.UserID, "")
-	flag.StringVar(&c.Logging.Elasticsearch.Password, "logging.elasticsearch.password", c.Logging.Elasticsearch.Password, "")
-	flag.StringVar(&c.Logging.Elasticsearch.Index, "logging.elasticsearch.index", c.Logging.Elasticsearch.Index, "")
-	flag.StringVar(&c.Logging.Elasticsearch.IndexTimeFormat, "logging.elasticsearch.indexTimeFormat", c.Logging.Elasticsearch.IndexTimeFormat, "")
-	flag.StringVar(&c.Logging.Elasticsearch.Type, "logging.elasticsearch.type", c.Logging.Elasticsearch.Type, "")
-
 	// messaging
 	flag.StringVar(&c.Messaging.Provider, "messaging.provider", c.Messaging.Provider, "")
 
@@ -327,27 +292,15 @@ func (c *config) ParseFlag() {
 }
 
 func (c *config) after() {
-	if c.Logging.Elasticsearch.URL != "" {
-		if c.Logging.Elasticsearch.Index == "" {
-			c.Logging.Elasticsearch.Index = AppName
-		}
-		if c.Logging.Elasticsearch.IndexTimeFormat == "" {
-			c.Logging.Elasticsearch.IndexTimeFormat = "2006.01.02"
-		}
-		if c.Logging.Elasticsearch.Type == "" {
-			c.Logging.Elasticsearch.Type = "app-log"
-		}
-	}
-
 	if c.Metrics.Provider == "elasticsearch" {
 		if c.Metrics.Elasticsearch.Index == "" {
-			c.Metrics.Elasticsearch.Index = AppName
+			c.Metrics.Elasticsearch.Index = fmt.Sprintf("%s-%s", AppName, "metrics")
 		}
 		if c.Metrics.Elasticsearch.IndexTimeFormat == "" {
 			c.Metrics.Elasticsearch.IndexTimeFormat = "2006.01.02"
 		}
 		if c.Metrics.Elasticsearch.Type == "" {
-			c.Metrics.Elasticsearch.Type = "metrics"
+			c.Metrics.Elasticsearch.Type = "_doc"
 		}
 	}
 }

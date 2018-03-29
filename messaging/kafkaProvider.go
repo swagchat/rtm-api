@@ -18,11 +18,6 @@ var KafkaConsumer *kafka.Consumer
 type KafkaProvider struct{}
 
 func (provider *KafkaProvider) Subscribe() {
-	logging.Log(zapcore.ErrorLevel, &logging.AppLog{
-		Kind:     "messaging-subscribe",
-		Provider: "kafka",
-	})
-
 	cfg := utils.Config()
 
 	sigchan := make(chan os.Signal, 1)
@@ -41,18 +36,22 @@ func (provider *KafkaProvider) Subscribe() {
 
 	if err != nil {
 		logging.Log(zapcore.ErrorLevel, &logging.AppLog{
-			Kind:     "messaging-error",
+			Kind:     "messaging-subscribe",
 			Provider: "kafka",
 			Message:  err.Error(),
 		})
+	} else {
+		logging.Log(zapcore.InfoLevel, &logging.AppLog{
+			Kind:     "messaging-subscribe",
+			Provider: "kafka",
+			Message:  KafkaConsumer.String(),
+		})
 	}
-
-	fmt.Printf("Created Consumer %v\n", KafkaConsumer)
 
 	err = KafkaConsumer.SubscribeTopics([]string{cfg.Messaging.Kafka.Topic}, nil)
 	if err != nil {
 		logging.Log(zapcore.ErrorLevel, &logging.AppLog{
-			Kind:     "messaging-error",
+			Kind:     "messaging-subscribe",
 			Provider: "kafka",
 			Message:  err.Error(),
 		})
@@ -65,9 +64,9 @@ func (provider *KafkaProvider) Subscribe() {
 		case sig := <-sigchan:
 			run = false
 			logging.Log(zapcore.InfoLevel, &logging.AppLog{
-				Kind:     "messaging-terminate",
+				Kind:     "messaging-subscribe-terminated",
 				Provider: "kafka",
-				Message:  sig.String(),
+				Message:  fmt.Sprintf("terminated by %s", sig.String()),
 			})
 		default:
 			ev := KafkaConsumer.Poll(100)
@@ -79,26 +78,26 @@ func (provider *KafkaProvider) Subscribe() {
 			case *kafka.Message:
 				services.Srv.Broadcast <- e.Value
 				logging.Log(zapcore.InfoLevel, &logging.AppLog{
-					Kind:     "messaging-receive",
+					Kind:     "messaging-subscribe-receive",
 					Provider: "kafka",
-					Message:  string(e.Value),
+					Message:  fmt.Sprintf("Receive a message [%s]", string(e.Value)),
 				})
 			case kafka.PartitionEOF:
 				logging.Log(zapcore.InfoLevel, &logging.AppLog{
-					Kind:     "messaging-reached",
+					Kind:     "messaging-subscribe",
 					Provider: "kafka",
 					Message:  e.String(),
 				})
 			case kafka.Error:
 				run = false
 				logging.Log(zapcore.ErrorLevel, &logging.AppLog{
-					Kind:     "messaging-error",
+					Kind:     "messaging-subscribe",
 					Provider: "kafka",
 					Message:  e.String(),
 				})
 			default:
 				logging.Log(zapcore.ErrorLevel, &logging.AppLog{
-					Kind:     "messaging-ignored",
+					Kind:     "messaging-subscribe",
 					Provider: "kafka",
 					Message:  e.String(),
 				})
@@ -108,8 +107,9 @@ func (provider *KafkaProvider) Subscribe() {
 
 	KafkaConsumer.Close()
 	logging.Log(zapcore.InfoLevel, &logging.AppLog{
-		Kind:     "messaging-close",
+		Kind:     "messaging-subscribe",
 		Provider: "kafka",
+		Message:  "close",
 	})
 }
 

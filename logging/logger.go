@@ -11,14 +11,19 @@ import (
 var appLogger = NewAppLogger()
 
 type AppLog struct {
-	Kind     string `json:"kind"`
-	UserID   string `json:"userId,omitempty"`
-	RoomID   string `json:"roomId,omitempty"`
-	Event    string `json:"event,omitempty"`
-	Client   string `json:"client,omitempty"`
-	Provider string `json:"provider,omitempty"`
-	Config   string `json:"config,omitempty"`
-	Message  string `json:"message,omitempty"`
+	Kind      string `json:"kind"`
+	Level     string `json:"level"`
+	UserID    string `json:"userId,omitempty"`
+	RoomID    string `json:"roomId,omitempty"`
+	Event     string `json:"event,omitempty"`
+	Client    string `json:"client,omitempty"`
+	Useragent string `json:"useragent,omitempty"`
+	IPAddress string `json:"ipAddress,omitempty"`
+	Language  string `json:"language",omitempty`
+	Provider  string `json:"provider,omitempty"`
+	Config    string `json:"config,omitempty"`
+	Message   string `json:"message,omitempty"`
+	Timestamp string `json:"timestamp"`
 }
 
 func NewAppLogger() *zap.Logger {
@@ -68,6 +73,15 @@ func Log(level zapcore.Level, al *AppLog) {
 	if al.Client != "" {
 		fields = append(fields, zap.String("client", al.Client))
 	}
+	if al.Useragent != "" {
+		fields = append(fields, zap.String("useragent", al.Useragent))
+	}
+	if al.IPAddress != "" {
+		fields = append(fields, zap.String("ipAddress", al.IPAddress))
+	}
+	if al.Language != "" {
+		fields = append(fields, zap.String("language", al.Language))
+	}
 	if al.Provider != "" {
 		fields = append(fields, zap.String("provider", al.Provider))
 	}
@@ -80,18 +94,25 @@ func Log(level zapcore.Level, al *AppLog) {
 
 	switch level {
 	case zapcore.DebugLevel:
+		fields = append(fields, zap.String("level", "debug"))
 		appLogger.Debug("", fields...)
 	case zapcore.InfoLevel:
+		fields = append(fields, zap.String("level", "info"))
 		appLogger.Info("", fields...)
 	case zapcore.WarnLevel:
+		fields = append(fields, zap.String("level", "warn"))
 		appLogger.Warn("", fields...)
 	case zapcore.ErrorLevel:
+		fields = append(fields, zap.String("level", "error"))
 		appLogger.Error("", fields...)
 	case zapcore.DPanicLevel:
+		fields = append(fields, zap.String("level", "dpanic"))
 		appLogger.DPanic("", fields...)
 	case zapcore.PanicLevel:
+		fields = append(fields, zap.String("level", "panic"))
 		appLogger.Panic("", fields...)
 	case zapcore.FatalLevel:
+		fields = append(fields, zap.String("level", "fatal"))
 		appLogger.Fatal("", fields...)
 	}
 }

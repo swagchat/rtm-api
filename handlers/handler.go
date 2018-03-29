@@ -86,7 +86,7 @@ func messageHandler(w http.ResponseWriter, r *http.Request) {
 	message, err := ioutil.ReadAll(r.Body)
 	if err != nil {
 		logging.Log(zapcore.ErrorLevel, &logging.AppLog{
-			Kind:    "handler-error",
+			Kind:    "handler",
 			Message: err.Error(),
 		})
 	}
@@ -97,15 +97,18 @@ func websocketHandler(w http.ResponseWriter, r *http.Request) {
 	conn, err := upgrader.Upgrade(w, r, nil)
 	if err != nil {
 		logging.Log(zapcore.ErrorLevel, &logging.AppLog{
-			Kind:    "handler-error",
+			Kind:    "handler",
 			Message: err.Error(),
 		})
 		return
 	}
 
 	c := &services.Client{
-		Conn: conn,
-		Send: make(chan []byte, 256),
+		Conn:      conn,
+		Send:      make(chan []byte, 256),
+		Useragent: r.Header.Get("User-Agent"),
+		IPAddress: r.Header.Get("Cf-Connecting-Ip"),
+		Language:  r.Header.Get("Accept-Language"),
 	}
 
 	params, _ := url.ParseQuery(r.URL.RawQuery)
@@ -122,7 +125,7 @@ func speechHandler(w http.ResponseWriter, r *http.Request) {
 	conn, err := speechUpgrader.Upgrade(w, r, nil)
 	if err != nil {
 		logging.Log(zapcore.ErrorLevel, &logging.AppLog{
-			Kind:    "handler-error",
+			Kind:    "handler",
 			Message: err.Error(),
 		})
 		return
