@@ -4,12 +4,14 @@ import (
 	"os"
 	"time"
 
+	stats "github.com/fukata/golang-stats-api-handler"
 	"github.com/swagchat/rtm-api/services"
 	"github.com/swagchat/rtm-api/utils"
 )
 
 type Metrics struct {
 	Hostname          string                    `json:"hostname"`
+	Stats             *stats.Stats              `json:"stats"`
 	AllCount          int                       `json:"allCount"`
 	UserCount         int                       `json:"userCount"`
 	RoomCount         int                       `json:"roomCount"`
@@ -44,6 +46,7 @@ func makeMetrics(nowTime time.Time) *Metrics {
 
 	hostname, _ := os.Hostname()
 	m.Hostname = hostname
+	m.Stats = stats.GetStats()
 
 	srv := services.GetServer()
 	users := srv.Connection.Users()
