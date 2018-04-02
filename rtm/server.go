@@ -91,13 +91,17 @@ func (s *server) broadcast(message []byte) {
 		json.Unmarshal(messageMap.Payload, &payloadText)
 	}
 
-	for _, roomUser := range s.Connection.rooms[messageMap.RoomId].roomUsers {
-		for conn, _ := range roomUser.events[messageMap.EventName].clients {
-			select {
-			case conn.Send <- message:
-			default:
-				close(conn.Send)
-				delete(srv.Connection.clients, conn)
+	if roomClient, ok := s.Connection.rooms[messageMap.RoomId]; ok {
+		if roomClient.roomUsers != nil {
+			for _, roomUser := range s.Connection.rooms[messageMap.RoomId].roomUsers {
+				for conn := range roomUser.events[messageMap.EventName].clients {
+					select {
+					case conn.Send <- message:
+					default:
+						close(conn.Send)
+						delete(srv.Connection.clients, conn)
+					}
+				}
 			}
 		}
 	}
