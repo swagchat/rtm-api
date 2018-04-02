@@ -12,7 +12,7 @@ import (
 	"github.com/swagchat/rtm-api/handlers"
 	"github.com/swagchat/rtm-api/messaging"
 	"github.com/swagchat/rtm-api/metrics"
-	"github.com/swagchat/rtm-api/services"
+	"github.com/swagchat/rtm-api/rtm"
 	"github.com/swagchat/rtm-api/utils"
 )
 
@@ -28,9 +28,9 @@ func main() {
 		}()
 	}
 
-	go metrics.MetricsProvider().Run()
-	go messaging.MessagingProvider().Subscribe()
-	go services.Srv.Run()
+	go metrics.Provider().Run()
+	go messaging.Provider().Subscribe()
+	go rtm.Server().Run()
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()

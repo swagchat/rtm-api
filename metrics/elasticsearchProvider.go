@@ -11,9 +11,9 @@ import (
 	"go.uber.org/zap/zapcore"
 )
 
-type ElasticsearchProvider struct{}
+type elasticsearchProvider struct{}
 
-func (provider *ElasticsearchProvider) Run() {
+func (ep *elasticsearchProvider) Run() {
 	c := utils.Config()
 	client, err := elastic.NewClient(elastic.SetURL(c.Metrics.Elasticsearch.URL))
 	if err != nil {

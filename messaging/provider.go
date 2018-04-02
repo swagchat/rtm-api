@@ -8,22 +8,22 @@ type MessagingInfo struct {
 	Message string
 }
 
-type Provider interface {
+type provider interface {
 	Subscribe()
 	Unsubscribe()
 }
 
-func MessagingProvider() Provider {
+func Provider() provider {
 	c := utils.Config()
 
-	var provider Provider
+	var p provider
 	switch c.Messaging.Provider {
 	case "":
-		provider = &NotuseProvider{}
+		p = &notuseProvider{}
 	case "kafka":
-		provider = &KafkaProvider{}
+		p = &kafkaProvider{}
 	case "nsq":
-		provider = &NsqProvider{}
+		p = &nsqProvider{}
 	}
-	return provider
+	return p
 }

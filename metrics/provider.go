@@ -5,7 +5,7 @@ import (
 	"time"
 
 	stats "github.com/fukata/golang-stats-api-handler"
-	"github.com/swagchat/rtm-api/services"
+	"github.com/swagchat/rtm-api/rtm"
 	"github.com/swagchat/rtm-api/utils"
 )
 
@@ -21,23 +21,23 @@ type Metrics struct {
 	Timestamp         string                    `json:"timestamp"`
 }
 
-type Provider interface {
+type provider interface {
 	Run()
 }
 
-func MetricsProvider() Provider {
+func Provider() provider {
 	c := utils.Config()
 
-	var provider Provider
+	var p provider
 	switch c.Metrics.Provider {
 	case "":
-		provider = &NotuseProvider{}
+		p = &notuseProvider{}
 	case "stdout":
-		provider = &StdoutProvider{}
+		p = &stdoutProvider{}
 	case "elasticsearch":
-		provider = &ElasticsearchProvider{}
+		p = &elasticsearchProvider{}
 	}
-	return provider
+	return p
 }
 
 func makeMetrics(nowTime time.Time) *Metrics {
@@ -48,7 +48,7 @@ func makeMetrics(nowTime time.Time) *Metrics {
 	m.Hostname = hostname
 	m.Stats = stats.GetStats()
 
-	srv := services.GetServer()
+	srv := rtm.Server()
 	users := srv.Connection.Users()
 	rooms := srv.Connection.Rooms()
 	m.AllCount = srv.Connection.ConnectionCount()

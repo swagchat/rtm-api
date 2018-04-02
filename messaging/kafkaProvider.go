@@ -8,16 +8,16 @@ import (
 
 	"github.com/confluentinc/confluent-kafka-go/kafka"
 	"github.com/swagchat/rtm-api/logging"
-	"github.com/swagchat/rtm-api/services"
+	"github.com/swagchat/rtm-api/rtm"
 	"github.com/swagchat/rtm-api/utils"
 	"go.uber.org/zap/zapcore"
 )
 
 var KafkaConsumer *kafka.Consumer
 
-type KafkaProvider struct{}
+type kafkaProvider struct{}
 
-func (provider *KafkaProvider) Subscribe() {
+func (kp *kafkaProvider) Subscribe() {
 	cfg := utils.Config()
 
 	sigchan := make(chan os.Signal, 1)
@@ -76,7 +76,7 @@ func (provider *KafkaProvider) Subscribe() {
 
 			switch e := ev.(type) {
 			case *kafka.Message:
-				services.Srv.Broadcast <- e.Value
+				rtm.Server().Broadcast <- e.Value
 				logging.Log(zapcore.InfoLevel, &logging.AppLog{
 					Kind:     "messaging-subscribe-receive",
 					Provider: "kafka",
@@ -113,7 +113,7 @@ func (provider *KafkaProvider) Subscribe() {
 	})
 }
 
-func (provider *KafkaProvider) Unsubscribe() {
+func (kp *kafkaProvider) Unsubscribe() {
 	logging.Log(zapcore.InfoLevel, &logging.AppLog{
 		Kind:     "messaging-unsubscribe",
 		Provider: "kafka",

@@ -1,4 +1,4 @@
-package services
+package rtm
 
 import (
 	"encoding/json"
@@ -9,9 +9,9 @@ import (
 	"go.uber.org/zap/zapcore"
 )
 
-var Srv *Server = NewServer()
+var srv *server = NewServer()
 
-type Server struct {
+type server struct {
 	Connection *Connection
 	Broadcast  chan []byte
 	Register   chan *RcvData
@@ -19,14 +19,14 @@ type Server struct {
 	Close      chan *Client
 }
 
-func NewServer() *Server {
+func NewServer() *server {
 	conn := &Connection{
 		clients: make(map[*Client]bool),
 		users:   make(map[string]*UserClients),
 		rooms:   make(map[string]*RoomClients),
 	}
 
-	srv := &Server{
+	srv := &server{
 		Connection: conn,
 		Broadcast:  make(chan []byte),
 		Register:   make(chan *RcvData),
@@ -36,11 +36,11 @@ func NewServer() *Server {
 	return srv
 }
 
-func GetServer() *Server {
-	return Srv
+func Server() *server {
+	return srv
 }
 
-func (s *Server) Run() {
+func (s *server) Run() {
 	for {
 		select {
 		case rcvData := <-s.Register:
@@ -83,7 +83,7 @@ func (s *Server) Run() {
 	}
 }
 
-func (s *Server) broadcast(message []byte) {
+func (s *server) broadcast(message []byte) {
 	var messageMap models.Message
 	json.Unmarshal(message, &messageMap)
 	if messageMap.Type == "text" {
@@ -97,7 +97,7 @@ func (s *Server) broadcast(message []byte) {
 			case conn.Send <- message:
 			default:
 				close(conn.Send)
-				delete(Srv.Connection.clients, conn)
+				delete(srv.Connection.clients, conn)
 			}
 		}
 	}

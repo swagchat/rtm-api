@@ -1,4 +1,4 @@
-package services
+package rtm
 
 import (
 	"strings"
@@ -61,7 +61,7 @@ func (c *Client) ReadPump() {
 
 			if websocket.IsUnexpectedCloseError(err, websocket.CloseGoingAway) {
 				c.Conn.Close()
-				Srv.Close <- c
+				srv.Close <- c
 			}
 			break
 		}
@@ -72,9 +72,9 @@ func (c *Client) ReadPump() {
 		rcvData.UserId = c.UserId
 		switch rcvData.Action {
 		case "bind":
-			Srv.Register <- rcvData
+			srv.Register <- rcvData
 		case "unbind":
-			Srv.Unregister <- rcvData
+			srv.Unregister <- rcvData
 		}
 	}
 }

@@ -17,7 +17,7 @@ import (
 	"github.com/gorilla/websocket"
 	"github.com/shogo82148/go-gracedown"
 	"github.com/swagchat/rtm-api/logging"
-	"github.com/swagchat/rtm-api/services"
+	"github.com/swagchat/rtm-api/rtm"
 	"github.com/swagchat/rtm-api/utils"
 	"go.uber.org/zap/zapcore"
 )
@@ -102,7 +102,7 @@ func messageHandler(w http.ResponseWriter, r *http.Request) {
 			Message: err.Error(),
 		})
 	}
-	services.Srv.Broadcast <- message
+	rtm.Server().Broadcast <- message
 }
 
 func websocketHandler(w http.ResponseWriter, r *http.Request) {
@@ -115,7 +115,7 @@ func websocketHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	c := &services.Client{
+	c := &rtm.Client{
 		Conn:      conn,
 		Send:      make(chan []byte, 256),
 		Useragent: r.Header.Get("User-Agent"),
@@ -128,7 +128,7 @@ func websocketHandler(w http.ResponseWriter, r *http.Request) {
 		c.UserId = userIDSlice[0]
 	}
 
-	services.Srv.Connection.AddClient(c)
+	rtm.Server().Connection.AddClient(c)
 	go c.WritePump()
 	go c.ReadPump()
 }
@@ -146,7 +146,7 @@ func speechHandler(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	stream := utils.SpeechClient(ctx)
 
-	c := &services.SpeechClient{
+	c := &rtm.SpeechClient{
 		Conn:   conn,
 		Send:   make(chan []byte, 256),
 		Stream: &stream,

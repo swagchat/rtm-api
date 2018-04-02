@@ -9,14 +9,14 @@ import (
 
 	nsq "github.com/nsqio/go-nsq"
 	"github.com/swagchat/rtm-api/logging"
-	"github.com/swagchat/rtm-api/services"
+	"github.com/swagchat/rtm-api/rtm"
 	"github.com/swagchat/rtm-api/utils"
 	"go.uber.org/zap/zapcore"
 )
 
 var NSQConsumer *nsq.Consumer
 
-type NsqProvider struct{}
+type nsqProvider struct{}
 
 func b2s(b []byte) string {
 	bh := (*reflect.SliceHeader)(unsafe.Pointer(&b))
@@ -24,7 +24,7 @@ func b2s(b []byte) string {
 	return *(*string)(unsafe.Pointer(&sh))
 }
 
-func (provider *NsqProvider) Subscribe() {
+func (np *nsqProvider) Subscribe() {
 	c := utils.Config()
 	if c.Messaging.NSQ.NsqlookupdHost != "" {
 		config := nsq.NewConfig()
@@ -49,7 +49,7 @@ func (provider *NsqProvider) Subscribe() {
 			})
 		}
 		NSQConsumer.AddHandler(nsq.HandlerFunc(func(message *nsq.Message) error {
-			services.Srv.Broadcast <- message.Body
+			rtm.Server().Broadcast <- message.Body
 			logging.Log(zapcore.InfoLevel, &logging.AppLog{
 				Kind:     "messaging-subscribe-receive",
 				Provider: "nsq",
@@ -68,7 +68,7 @@ func (provider *NsqProvider) Subscribe() {
 	}
 }
 
-func (provider *NsqProvider) Unsubscribe() {
+func (np *nsqProvider) Unsubscribe() {
 	if NSQConsumer != nil {
 		c := utils.Config()
 		hostname, err := os.Hostname()

@@ -1,7 +1,7 @@
 package metrics
 
-type NotuseProvider struct{}
+type notuseProvider struct{}
 
-func (provider *NotuseProvider) Run() {
+func (np *notuseProvider) Run() {
 	// Do not process anything
 }

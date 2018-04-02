@@ -8,9 +8,9 @@ import (
 	"go.uber.org/zap/zapcore"
 )
 
-type StdoutProvider struct{}
+type stdoutProvider struct{}
 
-func (provider *StdoutProvider) Run() {
+func (sp *stdoutProvider) Run() {
 	c := utils.Config()
 	exec(func() {
 		l, _ := time.LoadLocation("Etc/GMT")

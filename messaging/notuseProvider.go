@@ -1,11 +1,11 @@
 package messaging
 
-type NotuseProvider struct{}
+type notuseProvider struct{}
 
-func (provider *NotuseProvider) Subscribe() {
+func (provider *notuseProvider) Subscribe() {
 	// Do not process anything
 }
 
-func (provider *NotuseProvider) Unsubscribe() {
+func (provider *notuseProvider) Unsubscribe() {
 	// Do not process anything
 }
