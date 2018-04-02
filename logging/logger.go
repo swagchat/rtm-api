@@ -52,10 +52,6 @@ func NewAppLogger() *zap.Logger {
 	return appLogger
 }
 
-// func AppLogger() *zap.Logger {
-// 	return appLogger
-// }
-
 func Log(level zapcore.Level, al *AppLog) {
 	fields := make([]zapcore.Field, 0)
 	if al.Kind != "" {

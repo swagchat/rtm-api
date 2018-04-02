@@ -101,9 +101,9 @@ func NewConfig() *config {
 		Metrics:         metrics,
 	}
 
-	c.LoadYaml()
-	c.LoadEnvironment()
-	c.ParseFlag()
+	c.loadYaml()
+	c.loadEnvironment()
+	c.parseFlag()
 	c.after()
 
 	return c
@@ -113,12 +113,12 @@ func Config() *config {
 	return cfg
 }
 
-func (c *config) LoadYaml() {
+func (c *config) loadYaml() {
 	buf, _ := ioutil.ReadFile("config/app.yaml")
 	yaml.Unmarshal(buf, c)
 }
 
-func (c *config) LoadEnvironment() {
+func (c *config) loadEnvironment() {
 	var v string
 
 	if v = os.Getenv("HTTP_PORT"); v != "" {
@@ -239,7 +239,7 @@ func (c *config) LoadEnvironment() {
 	}
 }
 
-func (c *config) ParseFlag() {
+func (c *config) parseFlag() {
 	flag.BoolVar(&IsShowVersion, "v", false, "")
 	flag.BoolVar(&IsShowVersion, "version", false, "show version")
 
