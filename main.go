@@ -5,6 +5,7 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"net/http"
 
@@ -30,5 +31,8 @@ func main() {
 	go metrics.MetricsProvider().Run()
 	go messaging.MessagingProvider().Subscribe()
 	go services.Srv.Run()
-	handlers.StartServer()
+
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	handlers.StartServer(ctx)
 }

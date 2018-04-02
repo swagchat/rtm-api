@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
@@ -16,7 +17,6 @@ import (
 	"github.com/gorilla/websocket"
 	"github.com/shogo82148/go-gracedown"
 	"github.com/swagchat/rtm-api/logging"
-	"github.com/swagchat/rtm-api/messaging"
 	"github.com/swagchat/rtm-api/services"
 	"github.com/swagchat/rtm-api/utils"
 	"go.uber.org/zap/zapcore"
@@ -39,7 +39,7 @@ var (
 )
 
 // StartServer is HTTP Server
-func StartServer() {
+func StartServer(ctx context.Context) {
 	mux := bone.New()
 	mux.GetFunc("/", indexHandler)
 	mux.GetFunc("/stats", stats_api.Handler)
@@ -52,19 +52,7 @@ func StartServer() {
 	signalChan := make(chan os.Signal)
 	signal.Notify(signalChan, syscall.SIGTERM, syscall.SIGINT)
 
-	go func() {
-		for {
-			s := <-signalChan
-			if s == syscall.SIGTERM || s == syscall.SIGINT {
-				logging.Log(zapcore.InfoLevel, &logging.AppLog{
-					Kind:    "handler",
-					Message: fmt.Sprintf("%s graceful down by signal[%s]", utils.AppName, s.String()),
-				})
-				messaging.MessagingProvider().Unsubscribe()
-				gracedown.Close()
-			}
-		}
-	}()
+	go run(ctx)
 
 	c := utils.Config()
 	sb := utils.NewStringBuilder()
@@ -76,6 +64,30 @@ func StartServer() {
 	})
 
 	gracedown.ListenAndServe(fmt.Sprintf(":%s", c.HTTPPort), mux)
+
+	logging.Log(zapcore.InfoLevel, &logging.AppLog{
+		Kind:    "handler",
+		Message: "shut down complete",
+	})
+}
+
+func run(ctx context.Context) {
+	signalChan := make(chan os.Signal)
+	signal.Notify(signalChan, syscall.SIGTERM, syscall.SIGINT)
+	for {
+		select {
+		case <-ctx.Done():
+			gracedown.Close()
+		case s := <-signalChan:
+			if s == syscall.SIGTERM || s == syscall.SIGINT {
+				logging.Log(zapcore.InfoLevel, &logging.AppLog{
+					Kind:    "handler",
+					Message: fmt.Sprintf("%s graceful down by signal[%s]", utils.AppName, s.String()),
+				})
+				gracedown.Close()
+			}
+		}
+	}
 }
 
 func indexHandler(w http.ResponseWriter, r *http.Request) {
