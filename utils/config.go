@@ -63,12 +63,9 @@ type Messaging struct {
 }
 
 type Metrics struct {
-	Provider string
-	Interval int
-	Verbose  bool
-	Stdout   struct {
-		Interval int
-	}
+	Provider      string
+	Interval      int
+	Verbose       bool
 	Elasticsearch struct {
 		URL             string
 		UserID          string `yaml:"userId"`
@@ -302,5 +299,8 @@ func (c *config) after() {
 		if c.Metrics.Elasticsearch.Type == "" {
 			c.Metrics.Elasticsearch.Type = "_doc"
 		}
+	}
+	if c.Metrics.Interval == 0 {
+		c.Metrics.Interval = 5
 	}
 }

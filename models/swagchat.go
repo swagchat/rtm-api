@@ -43,3 +43,9 @@ type UserForRoom struct {
 	RuCreated     int64          `json:"ruCreated,omitempty"`
 	RuModified    int64          `json:"ruModified,omitempty"`
 }
+
+type RTMEvent struct {
+	Type    string
+	Payload []byte
+	UserIDs []string
+}

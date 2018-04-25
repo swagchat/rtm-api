@@ -23,7 +23,7 @@ func NewServer() *server {
 	conn := &Connection{
 		clients: make(map[*Client]bool),
 		users:   make(map[string]*UserClients),
-		rooms:   make(map[string]*RoomClients),
+		events:  make(map[string]*EventClients),
 	}
 
 	srv := &server{
@@ -54,7 +54,7 @@ func (s *server) Run() {
 			})
 
 			s.Connection.clients[rcvData.Client] = true
-			s.Connection.AddEvent(rcvData.UserId, rcvData.RoomId, rcvData.EventName, rcvData.Client)
+			s.Connection.AddEvent(rcvData.UserId, rcvData.EventName, rcvData.Client)
 
 		case rcvData := <-s.Unregister:
 			// Unregister event
@@ -65,7 +65,7 @@ func (s *server) Run() {
 				Event:  rcvData.EventName,
 				Client: fmt.Sprintf("%p", rcvData.Client.Conn),
 			})
-			s.Connection.RemoveEvent(rcvData.UserId, rcvData.RoomId, rcvData.EventName, rcvData.Client)
+			s.Connection.RemoveEvent(rcvData.UserId, rcvData.EventName, rcvData.Client)
 
 		case c := <-s.Close:
 			// Socket close
@@ -84,23 +84,17 @@ func (s *server) Run() {
 }
 
 func (s *server) broadcast(message []byte) {
-	var messageMap models.Message
-	json.Unmarshal(message, &messageMap)
-	if messageMap.Type == "text" {
-		var payloadText models.PayloadText
-		json.Unmarshal(messageMap.Payload, &payloadText)
-	}
+	var rtmEvent models.RTMEvent
+	json.Unmarshal(message, &rtmEvent)
 
-	if roomClient, ok := s.Connection.rooms[messageMap.RoomId]; ok {
-		if roomClient.roomUsers != nil {
-			for _, roomUser := range s.Connection.rooms[messageMap.RoomId].roomUsers {
-				for conn := range roomUser.events[messageMap.EventName].clients {
-					select {
-					case conn.Send <- message:
-					default:
-						close(conn.Send)
-						delete(srv.Connection.clients, conn)
-					}
+	for _, userID := range rtmEvent.UserIDs {
+		if user, ok := s.Connection.events[rtmEvent.Type].users[userID]; ok {
+			for conn := range user.clients {
+				select {
+				case conn.Send <- rtmEvent.Payload:
+				default:
+					close(conn.Send)
+					delete(srv.Connection.clients, conn)
 				}
 			}
 		}

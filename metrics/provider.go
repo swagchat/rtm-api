@@ -10,15 +10,14 @@ import (
 )
 
 type Metrics struct {
-	Hostname          string                    `json:"hostname"`
-	Stats             *stats.Stats              `json:"stats"`
-	AllCount          int                       `json:"allCount"`
-	UserCount         int                       `json:"userCount"`
-	RoomCount         int                       `json:"roomCount"`
-	EachUserCount     map[string]int            `json:"eachUserCount,omitempty"`
-	EachRoomCount     map[string]int            `json:"eachRoomCount,omitempty"`
-	EachRoomUserCount map[string]map[string]int `json:"eachRoomUserCount,omitempty"`
-	Timestamp         string                    `json:"timestamp"`
+	Hostname       string                    `json:"hostname"`
+	Stats          *stats.Stats              `json:"stats"`
+	AllCount       int                       `json:"allCount"`
+	UserCount      int                       `json:"userCount"`
+	EventCount     int                       `json:"eventCount"`
+	EachUserCount  map[string]int            `json:"eachUserCount,omitempty"`
+	EachEventCount map[string]map[string]int `json:"eachEventCount,omitempty"`
+	Timestamp      string                    `json:"timestamp"`
 }
 
 type provider interface {
@@ -46,15 +45,16 @@ func makeMetrics(nowTime time.Time) *Metrics {
 
 	hostname, _ := os.Hostname()
 	m.Hostname = hostname
-	m.Stats = stats.GetStats()
+	// m.Stats = stats.GetStats()
 
 	srv := rtm.Server()
 	users := srv.Connection.Users()
-	rooms := srv.Connection.Rooms()
+	events := srv.Connection.Events()
 	m.AllCount = srv.Connection.ConnectionCount()
 	m.UserCount = len(users)
-	m.RoomCount = len(rooms)
-
+	m.EventCount = len(events)
+	m.EachUserCount = srv.Connection.EachUserCount()
+	m.EachEventCount = srv.Connection.EachEventCount()
 	m.Timestamp = nowTime.Format(time.RFC3339)
 
 	if c.Metrics.Verbose {
