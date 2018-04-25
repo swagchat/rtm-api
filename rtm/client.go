@@ -71,9 +71,9 @@ func (c *Client) ReadPump() {
 		c.RoomIds = append(c.RoomIds, rcvData.RoomId)
 		rcvData.UserId = c.UserId
 		switch rcvData.Action {
-		case "bind":
+		case "subscribe":
 			srv.Register <- rcvData
-		case "unbind":
+		case "unsubscribe":
 			srv.Unregister <- rcvData
 		}
 	}
