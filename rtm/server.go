@@ -87,6 +87,10 @@ func (s *server) broadcast(message []byte) {
 	var rtmEvent models.RTMEvent
 	json.Unmarshal(message, &rtmEvent)
 
+	if _, ok := s.Connection.events[rtmEvent.Type]; !ok {
+		return
+	}
+
 	for _, userID := range rtmEvent.UserIDs {
 		if user, ok := s.Connection.events[rtmEvent.Type].users[userID]; ok {
 			for conn := range user.clients {

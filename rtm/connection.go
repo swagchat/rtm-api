@@ -119,6 +119,14 @@ func (con *Connection) RemoveEvent(userId, eventName string, c *Client) {
 		return
 	}
 
+	if _, ok := con.events[eventName]; !ok {
+		return
+	}
+
+	if _, ok := con.events[eventName].users[userId]; !ok {
+		return
+	}
+
 	if _, ok := con.events[eventName].users[userId].clients[c]; ok {
 		delete(con.events[eventName].users[userId].clients, c)
 	}
