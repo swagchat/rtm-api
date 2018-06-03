@@ -94,6 +94,9 @@ func (s *server) broadcast(message []byte) {
 	for _, userID := range rtmEvent.UserIDs {
 		if user, ok := s.Connection.events[rtmEvent.Type].users[userID]; ok {
 			for conn := range user.clients {
+				if conn == nil {
+					continue
+				}
 				select {
 				case conn.Send <- rtmEvent.Payload:
 				default:
