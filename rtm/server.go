@@ -69,6 +69,10 @@ func (s *server) Run() {
 
 		case c := <-s.Close:
 			// Socket close
+			logging.Log(zapcore.InfoLevel, &logging.AppLog{
+				Kind:   "socket-close",
+				Client: fmt.Sprintf("%p", c.Conn),
+			})
 			s.Connection.RemoveClient(c)
 			close(c.Send)
 

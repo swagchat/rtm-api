@@ -42,6 +42,18 @@ docker run swagchat/rtm-api
 
 [![Deploy](https://www.herokucdn.com/deploy/button.svg)](https://heroku.com/deploy)
 
+### Requirements
+
+#### kafka
+
+##### mac
+
+```
+brew install librdkafka
+```
+
+https://github.com/confluentinc/confluent-kafka-go
+
 ## License
 
 MIT License.

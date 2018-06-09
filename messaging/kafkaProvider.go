@@ -33,6 +33,11 @@ func (kp *kafkaProvider) Subscribe() {
 		// "session.timeout.ms":   6000,
 		// "default.topic.config": kafka.ConfigMap{"auto.offset.reset": "earliest"}
 	})
+	logging.Log(zapcore.InfoLevel, &logging.AppLog{
+		Kind:     "messaging-subscribe",
+		Provider: "kafka",
+		Message:  fmt.Sprintf("group.id[%s]", hostname),
+	})
 
 	if err != nil {
 		logging.Log(zapcore.ErrorLevel, &logging.AppLog{
@@ -80,7 +85,7 @@ func (kp *kafkaProvider) Subscribe() {
 				logging.Log(zapcore.InfoLevel, &logging.AppLog{
 					Kind:     "messaging-subscribe-receive",
 					Provider: "kafka",
-					Message:  fmt.Sprintf("Receive a message [%s]", string(e.Value)),
+					Message:  fmt.Sprintf("Receive a message"),
 				})
 			case kafka.PartitionEOF:
 				logging.Log(zapcore.InfoLevel, &logging.AppLog{
@@ -96,7 +101,7 @@ func (kp *kafkaProvider) Subscribe() {
 					Message:  e.String(),
 				})
 			default:
-				logging.Log(zapcore.ErrorLevel, &logging.AppLog{
+				logging.Log(zapcore.InfoLevel, &logging.AppLog{
 					Kind:     "messaging-subscribe",
 					Provider: "kafka",
 					Message:  e.String(),

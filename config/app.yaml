@@ -1,0 +1,14 @@
+#################################################
+#             RTM API settings                 #
+#################################################
+httpPort: 8102
+profiling: false
+errorLogging: true
+
+#################### Metrics #######################
+metrics:
+  provider: stdout
+
+#################### Logging ####################
+logging:
+  level: development
