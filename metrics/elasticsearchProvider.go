@@ -20,7 +20,7 @@ func (ep *elasticsearchProvider) Run() {
 		logging.Log(zapcore.ErrorLevel, &logging.AppLog{
 			Kind:     "metrics",
 			Provider: "elasticsearch",
-			Message:  err.Error(),
+			Message:  fmt.Sprintf("%s endpoint[%s]", err.Error(), c.Metrics.Elasticsearch.URL),
 		})
 	}
 
@@ -37,7 +37,7 @@ func (ep *elasticsearchProvider) Run() {
 			logging.Log(zapcore.ErrorLevel, &logging.AppLog{
 				Kind:     "metrics",
 				Provider: "elasticsearch",
-				Message:  err.Error(),
+				Message:  fmt.Sprintf("%s endpoint[%s] index[%s] indexTimeFormat[%s]", err.Error(), c.Metrics.Elasticsearch.URL, c.Metrics.Elasticsearch.Index, c.Metrics.Elasticsearch.IndexTimeFormat),
 			})
 		}
 	}, c.Metrics.Interval)
