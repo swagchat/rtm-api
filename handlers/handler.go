@@ -56,13 +56,6 @@ func StartServer(ctx context.Context) {
 	go run(ctx)
 
 	c := config.Config()
-	sb := utils.NewStringBuilder()
-	cfgStr := sb.PrintStruct("config", c)
-	logging.Log(zapcore.InfoLevel, &logging.AppLog{
-		Kind:    "handler",
-		Message: fmt.Sprintf("%s start", config.AppName),
-		Config:  cfgStr,
-	})
 
 	gracedown.ListenAndServe(fmt.Sprintf(":%s", c.HTTPPort), mux)
 
