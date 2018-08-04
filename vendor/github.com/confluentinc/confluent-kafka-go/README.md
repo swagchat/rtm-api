@@ -31,19 +31,105 @@ See the [API documentation](http://docs.confluent.io/current/clients/confluent-k
 
 **License**: [Apache License v2.0](http://www.apache.org/licenses/LICENSE-2.0)
 
+
+Examples
+========
+
+High-level balanced consumer
+
+```golang
+import (
+	"fmt"
+	"github.com/confluentinc/confluent-kafka-go/kafka"
+)
+
+func main() {
+
+	c, err := kafka.NewConsumer(&kafka.ConfigMap{
+		"bootstrap.servers": "localhost",
+		"group.id":          "myGroup",
+		"auto.offset.reset": "earliest",
+	})
+
+	if err != nil {
+		panic(err)
+	}
+
+	c.SubscribeTopics([]string{"myTopic", "^aRegex.*[Tt]opic"}, nil)
+
+	for {
+		msg, err := c.ReadMessage(-1)
+		if err == nil {
+			fmt.Printf("Message on %s: %s\n", msg.TopicPartition, string(msg.Value))
+		} else {
+			fmt.Printf("Consumer error: %v (%v)\n", err, msg)
+			break
+		}
+	}
+
+	c.Close()
+}
+```
+
+Producer
+
+```golang
+import (
+	"fmt"
+	"github.com/confluentinc/confluent-kafka-go/kafka"
+)
+
+func main() {
+
+	p, err := kafka.NewProducer(&kafka.ConfigMap{"bootstrap.servers": "localhost"})
+	if err != nil {
+		panic(err)
+	}
+
+	// Delivery report handler for produced messages
+	go func() {
+		for e := range p.Events() {
+			switch ev := e.(type) {
+			case *kafka.Message:
+				if ev.TopicPartition.Error != nil {
+					fmt.Printf("Delivery failed: %v\n", ev.TopicPartition)
+				} else {
+					fmt.Printf("Delivered message to %v\n", ev.TopicPartition)
+				}
+			}
+		}
+	}()
+
+	// Produce messages to topic (asynchronously)
+	topic := "myTopic"
+	for _, word := range []string{"Welcome", "to", "the", "Confluent", "Kafka", "Golang", "client"} {
+		p.Produce(&kafka.Message{
+			TopicPartition: kafka.TopicPartition{Topic: &topic, Partition: kafka.PartitionAny},
+			Value:          []byte(word),
+		}, nil)
+	}
+
+	// Wait for message deliveries
+	p.Flush(15 * 1000)
+}
+```
+
+More elaborate examples are available in the [examples](examples) directory.
+
+
 Getting Started
 ===============
 
 Installing librdkafka
 ---------------------
 
-This client for Go depends on librdkafka v0.11.0 or later, so you either need to install librdkafka through your OS/distributions package manager,
+This client for Go depends on librdkafka v0.11.4 or later, so you either need to install librdkafka through your OS/distributions package manager,
 or download and build it from source.
 
 - For Debian and Ubuntu based distros, install `librdkafka-dev` from the standard
 repositories or using [Confluent's Deb repository](http://docs.confluent.io/current/installation.html#installation-apt).
 - For Redhat based distros, install `librdkafka-devel` using [Confluent's YUM repository](http://docs.confluent.io/current/installation.html#rpm-packages-via-yum).
-- For MacOS X, install `librdkafka` from Homebrew.
+- For MacOS X, install `librdkafka` from Homebrew.  You may also need to brew install pkg-config if you don't already have it.
 - For Windows, see the `librdkafka.redist` NuGet package.
 
 Build from source:

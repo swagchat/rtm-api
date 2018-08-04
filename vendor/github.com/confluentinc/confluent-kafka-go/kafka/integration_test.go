@@ -17,7 +17,9 @@
 package kafka
 
 import (
+	"encoding/binary"
 	"fmt"
+	"reflect"
 	"testing"
 	"time"
 )
@@ -386,6 +388,12 @@ func consumerTest(t *testing.T, testname string, msgcnt int, cc consumerCtrl, co
 
 	}
 
+	// Trigger RevokePartitions
+	c.Unsubscribe()
+
+	// Handle RevokePartitions
+	c.Poll(500)
+
 }
 
 //Test consumer QueryWatermarkOffsets API
@@ -417,6 +425,72 @@ func TestConsumerQueryWatermarkOffsets(t *testing.T) {
 
 	if newmsgcnt-msgcnt != len(p0TestMsgs) {
 		t.Errorf("Incorrect offsets. Expected message count %d, got %d\n", len(p0TestMsgs), newmsgcnt-msgcnt)
+	}
+
+}
+
+//TestConsumerOffsetsForTimes
+func TestConsumerOffsetsForTimes(t *testing.T) {
+	if !testconfRead() {
+		t.Skipf("Missing testconf.json")
+	}
+
+	conf := ConfigMap{"bootstrap.servers": testconf.Brokers,
+		"group.id":            testconf.GroupID,
+		"api.version.request": true}
+
+	conf.updateFromTestconf()
+
+	c, err := NewConsumer(&conf)
+
+	if err != nil {
+		panic(err)
+	}
+	defer c.Close()
+
+	// Prime topic with test messages
+	createTestMessages()
+	producerTest(t, "Priming producer", p0TestMsgs, producerCtrl{silent: true},
+		func(p *Producer, m *Message, drChan chan Event) {
+			p.ProduceChannel() <- m
+		})
+
+	times := make([]TopicPartition, 1)
+	times[0] = TopicPartition{Topic: &testconf.Topic, Partition: 0, Offset: 12345}
+	offsets, err := c.OffsetsForTimes(times, 5000)
+	if err != nil {
+		t.Errorf("OffsetsForTimes() failed: %s\n", err)
+		return
+	}
+
+	if len(offsets) != 1 {
+		t.Errorf("OffsetsForTimes() returned wrong length %d, expected 1\n", len(offsets))
+		return
+	}
+
+	if *offsets[0].Topic != testconf.Topic || offsets[0].Partition != 0 {
+		t.Errorf("OffsetsForTimes() returned wrong topic/partition\n")
+		return
+	}
+
+	if offsets[0].Error != nil {
+		t.Errorf("OffsetsForTimes() returned error for partition 0: %s\n", err)
+		return
+	}
+
+	low, _, err := c.QueryWatermarkOffsets(testconf.Topic, 0, 5*1000)
+	if err != nil {
+		t.Errorf("Failed to query watermark offsets for topic %s. Error: %s\n", testconf.Topic, err)
+		return
+	}
+
+	t.Logf("OffsetsForTimes() returned offset %d for timestamp %d\n", offsets[0].Offset, times[0].Offset)
+
+	// Since we're using a phony low timestamp it is assumed that the returned
+	// offset will be oldest message.
+	if offsets[0].Offset != Offset(low) {
+		t.Errorf("OffsetsForTimes() returned invalid offset %d for timestamp %d, expected %d\n", offsets[0].Offset, times[0].Offset, low)
+		return
 	}
 
 }
@@ -707,6 +781,45 @@ func TestConsumerPollRebalance(t *testing.T) {
 		})
 }
 
+// Test Committed() API
+func TestConsumerCommitted(t *testing.T) {
+	consumerTestWithCommits(t, "Poll Consumer (rebalance callback, verify Committed())",
+		0, false, eventTestPollConsumer,
+		func(c *Consumer, event Event) error {
+			t.Logf("Rebalanced: %s", event)
+			rp, ok := event.(RevokedPartitions)
+			if ok {
+				offsets, err := c.Committed(rp.Partitions, 5000)
+				if err != nil {
+					t.Errorf("Failed to get committed offsets: %s\n", err)
+					return nil
+				}
+
+				t.Logf("Retrieved Committed offsets: %s\n", offsets)
+
+				if len(offsets) != len(rp.Partitions) || len(rp.Partitions) == 0 {
+					t.Errorf("Invalid number of partitions %d, should be %d (and >0)\n", len(offsets), len(rp.Partitions))
+				}
+
+				// Verify proper offsets: at least one partition needs
+				// to have a committed offset.
+				validCnt := 0
+				for _, p := range offsets {
+					if p.Error != nil {
+						t.Errorf("Committed() partition error: %v: %v", p, p.Error)
+					} else if p.Offset >= 0 {
+						validCnt++
+					}
+				}
+
+				if validCnt == 0 {
+					t.Errorf("Committed(): no partitions with valid offsets: %v", offsets)
+				}
+			}
+			return nil
+		})
+}
+
 // TestProducerConsumerTimestamps produces messages with timestamps
 // and verifies them on consumption.
 // Requires librdkafka >=0.9.4 and Kafka >=0.10.0.0
@@ -832,6 +945,141 @@ outer:
 			break outer
 		default:
 		}
+	}
+
+	c.Close()
+}
+
+// TestProducerConsumerHeaders produces messages with headers
+// and verifies them on consumption.
+// Requires librdkafka >=0.11.4 and Kafka >=0.11.0.0
+func TestProducerConsumerHeaders(t *testing.T) {
+	numver, strver := LibraryVersion()
+	if numver < 0x000b0400 {
+		t.Skipf("Requires librdkafka >=0.11.4 (currently on %s, 0x%x)", strver, numver)
+	}
+
+	if !testconfRead() {
+		t.Skipf("Missing testconf.json")
+	}
+
+	conf := ConfigMap{"bootstrap.servers": testconf.Brokers,
+		"api.version.request": true,
+		"enable.auto.commit":  false,
+		"group.id":            testconf.Topic,
+	}
+
+	conf.updateFromTestconf()
+
+	/*
+	 * Create producer and produce a couple of messages with and without
+	 * headers.
+	 */
+	t.Logf("Creating producer")
+	p, err := NewProducer(&conf)
+	if err != nil {
+		t.Fatalf("NewProducer: %v", err)
+	}
+
+	drChan := make(chan Event, 1)
+
+	// prepare some header values
+	bigBytes := make([]byte, 2500)
+	for i := 0; i < len(bigBytes); i++ {
+		bigBytes[i] = byte(i)
+	}
+
+	myVarint := make([]byte, binary.MaxVarintLen64)
+	myVarintLen := binary.PutVarint(myVarint, 12345678901234)
+
+	expMsgHeaders := [][]Header{
+		{
+			{"msgid", []byte("1")},
+			{"a key with SPACES ", bigBytes[:15]},
+			{"BIGONE!", bigBytes},
+		},
+		{
+			{"msgid", []byte("2")},
+			{"myVarint", myVarint[:myVarintLen]},
+			{"empty", []byte("")},
+			{"theNullIsNil", nil},
+		},
+		nil, // no headers
+		{
+			{"msgid", []byte("4")},
+			{"order", []byte("1")},
+			{"order", []byte("2")},
+			{"order", nil},
+			{"order", []byte("4")},
+		},
+	}
+
+	t.Logf("Producing %d messages", len(expMsgHeaders))
+	for _, hdrs := range expMsgHeaders {
+		err = p.Produce(&Message{
+			TopicPartition: TopicPartition{Topic: &testconf.Topic, Partition: 0},
+			Headers:        hdrs},
+			drChan)
+	}
+
+	if err != nil {
+		t.Fatalf("Produce: %v", err)
+	}
+
+	var firstOffset Offset = OffsetInvalid
+	for range expMsgHeaders {
+		ev := <-drChan
+		m, ok := ev.(*Message)
+		if !ok {
+			t.Fatalf("drChan: Expected *Message, got %v", ev)
+		}
+		if m.TopicPartition.Error != nil {
+			t.Fatalf("Delivery failed: %v", m.TopicPartition)
+		}
+		t.Logf("Produced message to %v", m.TopicPartition)
+		if firstOffset == OffsetInvalid {
+			firstOffset = m.TopicPartition.Offset
+		}
+	}
+
+	p.Close()
+
+	/* Now consume the produced messages and verify the headers */
+	t.Logf("Creating consumer starting at offset %v", firstOffset)
+	c, err := NewConsumer(&conf)
+	if err != nil {
+		t.Fatalf("NewConsumer: %v", err)
+	}
+
+	err = c.Assign([]TopicPartition{{Topic: &testconf.Topic, Partition: 0,
+		Offset: firstOffset}})
+	if err != nil {
+		t.Fatalf("Assign: %v", err)
+	}
+
+	for n, hdrs := range expMsgHeaders {
+		m, err := c.ReadMessage(-1)
+		if err != nil {
+			t.Fatalf("Expected message #%d, not error %v", n, err)
+		}
+
+		if m.Headers == nil {
+			if hdrs == nil {
+				continue
+			}
+			t.Fatalf("Expected message #%d to have headers", n)
+		}
+
+		if hdrs == nil {
+			t.Fatalf("Expected message #%d not to have headers, but found %v", n, m.Headers)
+		}
+
+		// Compare headers
+		if !reflect.DeepEqual(hdrs, m.Headers) {
+			t.Fatalf("Expected message #%d headers to match %v, but found %v", n, hdrs, m.Headers)
+		}
+
+		t.Logf("Message #%d headers matched: %v", n, m.Headers)
 	}
 
 	c.Close()

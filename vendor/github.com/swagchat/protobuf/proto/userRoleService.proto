@@ -1,0 +1,13 @@
+syntax = "proto3";
+
+package swagchat.protobuf;
+option go_package = "github.com/swagchat/protobuf/protoc-gen-go";
+
+import "google/api/annotations.proto";
+import "google/protobuf/empty.proto";
+import "userRoleMessage.proto";
+
+service UserRoleService {
+  rpc CreateUserRoles (CreateUserRolesRequest) returns (google.protobuf.Empty) {}
+  rpc DeleteUserRoles (DeleteUserRolesRequest) returns (google.protobuf.Empty) {}
+}

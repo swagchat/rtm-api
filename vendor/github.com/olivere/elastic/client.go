@@ -26,7 +26,7 @@ import (
 
 const (
 	// Version is the current version of Elastic.
-	Version = "6.1.13"
+	Version = "6.1.27"
 
 	// DefaultURL is the default endpoint of Elasticsearch on the local machine.
 	// It is used e.g. when initializing a new Client without a specific URL.
@@ -75,6 +75,9 @@ const (
 	// DefaultSendGetBodyAs is the HTTP method to use when elastic is sending
 	// a GET request with a body.
 	DefaultSendGetBodyAs = "GET"
+
+	// DefaultGzipEnabled specifies if gzip compression is enabled by default.
+	DefaultGzipEnabled = false
 
 	// off is used to disable timeouts.
 	off = -1 * time.Second
@@ -131,6 +134,7 @@ type Client struct {
 	basicAuthUsername         string          // username for HTTP Basic Auth
 	basicAuthPassword         string          // password for HTTP Basic Auth
 	sendGetBodyAs             string          // override for when sending a GET with a body
+	gzipEnabled               bool            // gzip compression enabled or disabled (default)
 	requiredPlugins           []string        // list of required plugins
 	retrier                   Retrier         // strategy for retries
 }
@@ -205,6 +209,7 @@ func NewClient(options ...ClientOptionFunc) (*Client, error) {
 		snifferCallback:           nopSnifferCallback,
 		snifferStop:               make(chan bool),
 		sendGetBodyAs:             DefaultSendGetBodyAs,
+		gzipEnabled:               DefaultGzipEnabled,
 		retrier:                   noRetries, // no retries by default
 	}
 
@@ -362,6 +367,7 @@ func NewSimpleClient(options ...ClientOptionFunc) (*Client, error) {
 		snifferCallback:           nopSnifferCallback,
 		snifferStop:               make(chan bool),
 		sendGetBodyAs:             DefaultSendGetBodyAs,
+		gzipEnabled:               DefaultGzipEnabled,
 		retrier:                   noRetries, // no retries by default
 	}
 
@@ -586,6 +592,14 @@ func SetMaxRetries(maxRetries int) ClientOptionFunc {
 			backoff := NewSimpleBackoff(ticks...)
 			c.retrier = NewBackoffRetrier(backoff)
 		}
+		return nil
+	}
+}
+
+// SetGzip enables or disables gzip compression (disabled by default).
+func SetGzip(enabled bool) ClientOptionFunc {
+	return func(c *Client) error {
+		c.gzipEnabled = enabled
 		return nil
 	}
 }
@@ -1185,6 +1199,7 @@ func (c *Client) PerformRequest(ctx context.Context, opt PerformRequestOptions) 
 	basicAuthUsername := c.basicAuthUsername
 	basicAuthPassword := c.basicAuthPassword
 	sendGetBodyAs := c.sendGetBodyAs
+	gzipEnabled := c.gzipEnabled
 	retrier := c.retrier
 	if opt.Retrier != nil {
 		retrier = opt.Retrier
@@ -1248,7 +1263,7 @@ func (c *Client) PerformRequest(ctx context.Context, opt PerformRequestOptions) 
 
 		// Set body
 		if opt.Body != nil {
-			err = req.SetBody(opt.Body)
+			err = req.SetBody(opt.Body, gzipEnabled)
 			if err != nil {
 				c.errorf("elastic: couldn't set body %+v for request: %v", opt.Body, err)
 				return nil, err
@@ -1260,16 +1275,9 @@ func (c *Client) PerformRequest(ctx context.Context, opt PerformRequestOptions) 
 
 		// Get response
 		res, err := c.c.Do((*http.Request)(req).WithContext(ctx))
-		if err == context.Canceled || err == context.DeadlineExceeded {
+		if IsContextErr(err) {
 			// Proceed, but don't mark the node as dead
 			return nil, err
-		}
-		if ue, ok := err.(*url.Error); ok {
-			// This happens e.g. on redirect errors, see https://golang.org/src/net/http/client_test.go#L329
-			if ue.Err == context.Canceled || ue.Err == context.DeadlineExceeded {
-				// Proceed, but don't mark the node as dead
-				return nil, err
-			}
 		}
 		if err != nil {
 			n++
@@ -1603,12 +1611,7 @@ func (c *Client) GetFieldMapping() *IndicesGetFieldMappingService {
 
 // -- cat APIs --
 
-// TODO cat aliases
-// TODO cat allocation
-// TODO cat count
 // TODO cat fielddata
-// TODO cat health
-// TODO cat indices
 // TODO cat master
 // TODO cat nodes
 // TODO cat pending tasks
@@ -1617,6 +1620,31 @@ func (c *Client) GetFieldMapping() *IndicesGetFieldMappingService {
 // TODO cat thread pool
 // TODO cat shards
 // TODO cat segments
+
+// CatAliases returns information about aliases.
+func (c *Client) CatAliases() *CatAliasesService {
+	return NewCatAliasesService(c)
+}
+
+// CatAllocation returns information about the allocation across nodes.
+func (c *Client) CatAllocation() *CatAllocationService {
+	return NewCatAllocationService(c)
+}
+
+// CatCount returns document counts for indices.
+func (c *Client) CatCount() *CatCountService {
+	return NewCatCountService(c)
+}
+
+// CatHealth returns information about cluster health.
+func (c *Client) CatHealth() *CatHealthService {
+	return NewCatHealthService(c)
+}
+
+// CatIndices returns information about indices.
+func (c *Client) CatIndices() *CatIndicesService {
+	return NewCatIndicesService(c)
+}
 
 // -- Ingest APIs --
 
@@ -1720,6 +1748,24 @@ func (c *Client) SnapshotGetRepository(repositories ...string) *SnapshotGetRepos
 // SnapshotVerifyRepository verifies a snapshot repository.
 func (c *Client) SnapshotVerifyRepository(repository string) *SnapshotVerifyRepositoryService {
 	return NewSnapshotVerifyRepositoryService(c).Repository(repository)
+}
+
+// -- Scripting APIs --
+
+// GetScript reads a stored script in Elasticsearch.
+// Use PutScript for storing a script.
+func (c *Client) GetScript() *GetScriptService {
+	return NewGetScriptService(c)
+}
+
+// PutScript allows saving a stored script in Elasticsearch.
+func (c *Client) PutScript() *PutScriptService {
+	return NewPutScriptService(c)
+}
+
+// DeleteScript allows removing a stored script from Elasticsearch.
+func (c *Client) DeleteScript() *DeleteScriptService {
+	return NewDeleteScriptService(c)
 }
 
 // -- Helpers and shortcuts --

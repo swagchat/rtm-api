@@ -18,6 +18,8 @@ package kafka
 
 import (
 	"fmt"
+	"math"
+	"time"
 	"unsafe"
 )
 
@@ -194,6 +196,29 @@ func (c *Consumer) CommitOffsets(offsets []TopicPartition) ([]TopicPartition, er
 	return c.commit(offsets)
 }
 
+// StoreOffsets stores the provided list of offsets that will be committed
+// to the offset store according to `auto.commit.interval.ms` or manual
+// offset-less Commit().
+//
+// Returns the stored offsets on success. If at least one offset couldn't be stored,
+// an error and a list of offsets is returned. Each offset can be checked for
+// specific errors via its `.Error` member.
+func (c *Consumer) StoreOffsets(offsets []TopicPartition) (storedOffsets []TopicPartition, err error) {
+	coffsets := newCPartsFromTopicPartitions(offsets)
+	defer C.rd_kafka_topic_partition_list_destroy(coffsets)
+
+	cErr := C.rd_kafka_offsets_store(c.handle.rk, coffsets)
+
+	// coffsets might be annotated with an error
+	storedOffsets = newTopicPartitionsFromCparts(coffsets)
+
+	if cErr != C.RD_KAFKA_RESP_ERR_NO_ERROR {
+		return storedOffsets, newError(cErr)
+	}
+
+	return storedOffsets, nil
+}
+
 // Seek seeks the given topic partitions using the offset from the TopicPartition.
 //
 // If timeoutMs is not 0 the call will wait this long for the
@@ -238,6 +263,64 @@ func (c *Consumer) Events() chan Event {
 	return c.events
 }
 
+// ReadMessage polls the consumer for a message.
+//
+// This is a conveniance API that wraps Poll() and only returns
+// messages or errors. All other event types are discarded.
+//
+// The call will block for at most `timeout` waiting for
+// a new message or error. `timeout` may be set to -1 for
+// indefinite wait.
+//
+// Timeout is returned as (nil, err) where err is `kafka.(Error).Code == Kafka.ErrTimedOut`.
+//
+// Messages are returned as (msg, nil),
+// while general errors are returned as (nil, err),
+// and partition-specific errors are returned as (msg, err) where
+// msg.TopicPartition provides partition-specific information (such as topic, partition and offset).
+//
+// All other event types, such as PartitionEOF, AssignedPartitions, etc, are silently discarded.
+//
+func (c *Consumer) ReadMessage(timeout time.Duration) (*Message, error) {
+
+	var absTimeout time.Time
+	var timeoutMs int
+
+	if timeout > 0 {
+		absTimeout = time.Now().Add(timeout)
+		timeoutMs = (int)(timeout.Seconds() * 1000.0)
+	} else {
+		timeoutMs = (int)(timeout)
+	}
+
+	for {
+		ev := c.Poll(timeoutMs)
+
+		switch e := ev.(type) {
+		case *Message:
+			if e.TopicPartition.Error != nil {
+				return e, e.TopicPartition.Error
+			}
+			return e, nil
+		case Error:
+			return nil, e
+		default:
+			// Ignore other event types
+		}
+
+		if timeout > 0 {
+			// Calculate remaining time
+			timeoutMs = int(math.Max(0.0, absTimeout.Sub(time.Now()).Seconds()*1000.0))
+		}
+
+		if timeoutMs == 0 && ev == nil {
+			return nil, newError(C.RD_KAFKA_RESP_ERR__TIMED_OUT)
+		}
+
+	}
+
+}
+
 // Close Consumer instance.
 // The object is no longer usable after this call.
 func (c *Consumer) Close() (err error) {
@@ -246,7 +329,7 @@ func (c *Consumer) Close() (err error) {
 		// Wait for consumerReader() to terminate (by closing readerTermChan)
 		close(c.readerTermChan)
 		c.handle.waitTerminated(1)
-
+		close(c.events)
 	}
 
 	C.rd_kafka_queue_destroy(c.handle.rkq)
@@ -281,6 +364,11 @@ func (c *Consumer) Close() (err error) {
 // the factor completely. With a channel size of 1 at most one
 // event or message may be outdated.
 func NewConsumer(conf *ConfigMap) (*Consumer, error) {
+
+	err := versionCheck()
+	if err != nil {
+		return nil, err
+	}
 
 	groupid, _ := conf.get("group.id", nil)
 	if groupid == nil {
@@ -395,6 +483,24 @@ func (c *Consumer) QueryWatermarkOffsets(topic string, partition int32, timeoutM
 	return queryWatermarkOffsets(c, topic, partition, timeoutMs)
 }
 
+// OffsetsForTimes looks up offsets by timestamp for the given partitions.
+//
+// The returned offset for each partition is the earliest offset whose
+// timestamp is greater than or equal to the given timestamp in the
+// corresponding partition.
+//
+// The timestamps to query are represented as `.Offset` in the `times`
+// argument and the looked up offsets are represented as `.Offset` in the returned
+// `offsets` list.
+//
+// The function will block for at most timeoutMs milliseconds.
+//
+// Duplicate Topic+Partitions are not supported.
+// Per-partition errors may be returned in the `.Error` field.
+func (c *Consumer) OffsetsForTimes(times []TopicPartition, timeoutMs int) (offsets []TopicPartition, err error) {
+	return offsetsForTimes(c, times, timeoutMs)
+}
+
 // Subscription returns the current subscription as set by Subscribe()
 func (c *Consumer) Subscription() (topics []string, err error) {
 	var cTopics *C.rd_kafka_topic_partition_list_t
@@ -429,4 +535,42 @@ func (c *Consumer) Assignment() (partitions []TopicPartition, err error) {
 	partitions = newTopicPartitionsFromCparts(cParts)
 
 	return partitions, nil
+}
+
+// Committed retrieves committed offsets for the given set of partitions
+func (c *Consumer) Committed(partitions []TopicPartition, timeoutMs int) (offsets []TopicPartition, err error) {
+	cparts := newCPartsFromTopicPartitions(partitions)
+	defer C.rd_kafka_topic_partition_list_destroy(cparts)
+	cerr := C.rd_kafka_committed(c.handle.rk, cparts, C.int(timeoutMs))
+	if cerr != C.RD_KAFKA_RESP_ERR_NO_ERROR {
+		return nil, newError(cerr)
+	}
+
+	return newTopicPartitionsFromCparts(cparts), nil
+}
+
+// Pause consumption for the provided list of partitions
+//
+// Note that messages already enqueued on the consumer's Event channel
+// (if `go.events.channel.enable` has been set) will NOT be purged by
+// this call, set `go.events.channel.size` accordingly.
+func (c *Consumer) Pause(partitions []TopicPartition) (err error) {
+	cparts := newCPartsFromTopicPartitions(partitions)
+	defer C.rd_kafka_topic_partition_list_destroy(cparts)
+	cerr := C.rd_kafka_pause_partitions(c.handle.rk, cparts)
+	if cerr != C.RD_KAFKA_RESP_ERR_NO_ERROR {
+		return newError(cerr)
+	}
+	return nil
+}
+
+// Resume consumption for the provided list of partitions
+func (c *Consumer) Resume(partitions []TopicPartition) (err error) {
+	cparts := newCPartsFromTopicPartitions(partitions)
+	defer C.rd_kafka_topic_partition_list_destroy(cparts)
+	cerr := C.rd_kafka_resume_partitions(c.handle.rk, cparts)
+	if cerr != C.RD_KAFKA_RESP_ERR_NO_ERROR {
+		return newError(cerr)
+	}
+	return nil
 }

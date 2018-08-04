@@ -23,11 +23,11 @@
 
 [[constraint]]
   name = "cloud.google.com/go"
-  version = "0.20.0"
+  version = "0.25.0"
 
 [[constraint]]
   name = "github.com/confluentinc/confluent-kafka-go"
-  version = "0.11.0"
+  version = "0.11.4"
 
 [[constraint]]
   name = "github.com/fatih/structs"
@@ -50,6 +50,10 @@
   version = "1.0.7"
 
 [[constraint]]
+  name = "github.com/olivere/elastic"
+  version = "6.1.27"
+
+[[constraint]]
   name = "github.com/satori/go.uuid"
   version = "1.2.0"
 
@@ -58,8 +62,12 @@
   name = "github.com/shogo82148/go-gracedown"
 
 [[constraint]]
+  branch = "master"
+  name = "github.com/swagchat/protobuf"
+
+[[constraint]]
   name = "go.uber.org/zap"
-  version = "1.7.1"
+  version = "1.9.0"
 
 [[constraint]]
   branch = "master"
@@ -67,4 +75,4 @@
 
 [[constraint]]
   name = "gopkg.in/yaml.v2"
-  version = "2.2.0"
+  version = "2.2.1"

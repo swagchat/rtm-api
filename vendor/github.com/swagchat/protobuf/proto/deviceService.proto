@@ -1,0 +1,14 @@
+syntax = "proto3";
+
+package swagchat.protobuf;
+option go_package = "github.com/swagchat/protobuf/protoc-gen-go";
+
+import "google/api/annotations.proto";
+import "google/protobuf/empty.proto";
+import "deviceMessage.proto";
+
+service DeviceService {
+  rpc CreateDevice (CreateDeviceRequest) returns (Device) {}
+  rpc GetDevices (GetDevicesRequest) returns (DevicesResponse) {}
+  rpc DeleteDevice (DeleteDeviceRequest) returns (google.protobuf.Empty) {}
+}

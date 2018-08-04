@@ -26,28 +26,88 @@ import (
 /*
 #include <stdlib.h>
 #include <librdkafka/rdkafka.h>
+#include "glue_rdkafka.h"
+
+
+#ifdef RD_KAFKA_V_HEADERS
+// Convert tmphdrs to chdrs (created by this function).
+// If tmphdr.size == -1: value is considered Null
+//    tmphdr.size == 0:  value is considered empty (ignored)
+//    tmphdr.size > 0:   value is considered non-empty
+//
+// WARNING: The header values will be freed by this function.
+void tmphdrs_to_chdrs (tmphdr_t *tmphdrs, size_t tmphdrsCnt,
+                       rd_kafka_headers_t **chdrs) {
+   size_t i;
+
+   *chdrs = rd_kafka_headers_new(tmphdrsCnt);
+
+   for (i = 0 ; i < tmphdrsCnt ; i++) {
+      rd_kafka_header_add(*chdrs,
+                          tmphdrs[i].key, -1,
+                          tmphdrs[i].size == -1 ? NULL :
+                          (tmphdrs[i].size == 0 ? "" : tmphdrs[i].val),
+                          tmphdrs[i].size == -1 ? 0 : tmphdrs[i].size);
+      if (tmphdrs[i].size > 0)
+         free((void *)tmphdrs[i].val);
+   }
+}
+
+#else
+void free_tmphdrs (tmphdr_t *tmphdrs, size_t tmphdrsCnt) {
+   size_t i;
+   for (i = 0 ; i < tmphdrsCnt ; i++) {
+      if (tmphdrs[i].size > 0)
+         free((void *)tmphdrs[i].val);
+   }
+}
+#endif
+
 
 rd_kafka_resp_err_t do_produce (rd_kafka_t *rk,
           rd_kafka_topic_t *rkt, int32_t partition,
           int msgflags,
-          void *val, size_t val_len, void *key, size_t key_len,
+          int valIsNull, void *val, size_t val_len,
+          int keyIsNull, void *key, size_t key_len,
           int64_t timestamp,
+          tmphdr_t *tmphdrs, size_t tmphdrsCnt,
           uintptr_t cgoid) {
+  void *valp = valIsNull ? NULL : val;
+  void *keyp = keyIsNull ? NULL : key;
+#ifdef RD_KAFKA_V_HEADERS
+  rd_kafka_headers_t *hdrs = NULL;
+#endif
+
+
+  if (tmphdrsCnt > 0) {
+#ifdef RD_KAFKA_V_HEADERS
+     tmphdrs_to_chdrs(tmphdrs, tmphdrsCnt, &hdrs);
+#else
+     free_tmphdrs(tmphdrs, tmphdrsCnt);
+     return RD_KAFKA_RESP_ERR__NOT_IMPLEMENTED;
+#endif
+  }
+
 
 #ifdef RD_KAFKA_V_TIMESTAMP
   return rd_kafka_producev(rk,
         RD_KAFKA_V_RKT(rkt),
         RD_KAFKA_V_PARTITION(partition),
         RD_KAFKA_V_MSGFLAGS(msgflags),
-        RD_KAFKA_V_VALUE(val, val_len),
-        RD_KAFKA_V_KEY(key, key_len),
+        RD_KAFKA_V_VALUE(valp, val_len),
+        RD_KAFKA_V_KEY(keyp, key_len),
         RD_KAFKA_V_TIMESTAMP(timestamp),
+#ifdef RD_KAFKA_V_HEADERS
+        RD_KAFKA_V_HEADERS(hdrs),
+#endif
         RD_KAFKA_V_OPAQUE((void *)cgoid),
         RD_KAFKA_V_END);
 #else
   if (timestamp)
       return RD_KAFKA_RESP_ERR__NOT_IMPLEMENTED;
-  if (rd_kafka_produce(rkt, partition, msgflags, val, val_len, key, key_len,
+  if (rd_kafka_produce(rkt, partition, msgflags,
+                       valp, val_len,
+                       keyp, key_len,
                        (void *)cgoid) == -1)
       return rd_kafka_last_error();
   else
@@ -84,27 +144,52 @@ func (p *Producer) produce(msg *Message, msgFlags int, deliveryChan chan Event) 
 
 	crkt := p.handle.getRkt(*msg.TopicPartition.Topic)
 
-	var valp *byte
-	var keyp *byte
-	var empty byte
-	valLen := 0
-	keyLen := 0
+	// Three problems:
+	//  1) There's a difference between an empty Value or Key (length 0, proper pointer) and
+	//     a null Value or Key (length 0, null pointer).
+	//  2) we need to be able to send a null Value or Key, but the unsafe.Pointer(&slice[0])
+	//     dereference can't be performed on a nil slice.
+	//  3) cgo's pointer checking requires the unsafe.Pointer(slice..) call to be made
+	//     in the call to the C function.
+	//
+	// Solution:
+	//  Keep track of whether the Value or Key were nil (1), but let the valp and keyp pointers
+	//  point to a 1-byte slice (but the length to send is still 0) so that the dereference (2)
+	//  works.
+	//  Then perform the unsafe.Pointer() on the valp and keyp pointers (which now either point
+	//  to the original msg.Value and msg.Key or to the 1-byte slices) in the call to C (3).
+	//
+	var valp []byte
+	var keyp []byte
+	oneByte := []byte{0}
+	var valIsNull C.int
+	var keyIsNull C.int
+	var valLen int
+	var keyLen int
 
-	if msg.Value != nil {
+	if msg.Value == nil {
+		valIsNull = 1
+		valLen = 0
+		valp = oneByte
+	} else {
 		valLen = len(msg.Value)
-		// allow sending 0-length messages (as opposed to null messages)
 		if valLen > 0 {
-			valp = &msg.Value[0]
+			valp = msg.Value
 		} else {
-			valp = &empty
+			valp = oneByte
 		}
 	}
-	if msg.Key != nil {
+
+	if msg.Key == nil {
+		keyIsNull = 1
+		keyLen = 0
+		keyp = oneByte
+	} else {
 		keyLen = len(msg.Key)
 		if keyLen > 0 {
-			keyp = &msg.Key[0]
+			keyp = msg.Key
 		} else {
-			keyp = &empty
+			keyp = oneByte
 		}
 	}
 
@@ -125,12 +210,42 @@ func (p *Producer) produce(msg *Message, msgFlags int, deliveryChan chan Event) 
 		timestamp = msg.Timestamp.UnixNano() / 1000000
 	}
 
+	// Convert headers to C-friendly tmphdrs
+	var tmphdrs []C.tmphdr_t
+	tmphdrsCnt := len(msg.Headers)
+
+	if tmphdrsCnt > 0 {
+		tmphdrs = make([]C.tmphdr_t, tmphdrsCnt)
+
+		for n, hdr := range msg.Headers {
+			tmphdrs[n].key = C.CString(hdr.Key)
+			if hdr.Value != nil {
+				tmphdrs[n].size = C.ssize_t(len(hdr.Value))
+				if tmphdrs[n].size > 0 {
+					// Make a copy of the value
+					// to avoid runtime panic with
+					// foreign Go pointers in cgo.
+					tmphdrs[n].val = C.CBytes(hdr.Value)
+				}
+			} else {
+				// null value
+				tmphdrs[n].size = C.ssize_t(-1)
+			}
+		}
+	} else {
+		// no headers, need a dummy tmphdrs of size 1 to avoid index
+		// out of bounds panic in do_produce() call below.
+		// tmphdrsCnt will be 0.
+		tmphdrs = []C.tmphdr_t{{nil, nil, 0}}
+	}
+
 	cErr := C.do_produce(p.handle.rk, crkt,
 		C.int32_t(msg.TopicPartition.Partition),
 		C.int(msgFlags)|C.RD_KAFKA_MSG_F_COPY,
-		unsafe.Pointer(valp), C.size_t(valLen),
-		unsafe.Pointer(keyp), C.size_t(keyLen),
+		valIsNull, unsafe.Pointer(&valp[0]), C.size_t(valLen),
+		keyIsNull, unsafe.Pointer(&keyp[0]), C.size_t(keyLen),
 		C.int64_t(timestamp),
+		(*C.tmphdr_t)(unsafe.Pointer(&tmphdrs[0])), C.size_t(tmphdrsCnt),
 		(C.uintptr_t)(cgoid))
 	if cErr != C.RD_KAFKA_RESP_ERR_NO_ERROR {
 		if cgoid != 0 {
@@ -149,6 +264,8 @@ func (p *Producer) produce(msg *Message, msgFlags int, deliveryChan chan Event) 
 // or on the Producer object's Events() channel if not.
 // msg.Timestamp requires librdkafka >= 0.9.4 (else returns ErrNotImplemented),
 // api.version.request=true, and broker >= 0.10.0.0.
+// msg.Headers requires librdkafka >= 0.11.4 (else returns ErrNotImplemented),
+// api.version.request=true, and broker >= 0.11.0.0.
 // Returns an error if message could not be enqueued.
 func (p *Producer) Produce(msg *Message, deliveryChan chan Event) error {
 	return p.produce(msg, 0, deliveryChan)
@@ -158,7 +275,7 @@ func (p *Producer) Produce(msg *Message, deliveryChan chan Event) error {
 // These batches do not relate to the message batches sent to the broker, the latter
 // are collected on the fly internally in librdkafka.
 // WARNING: This is an experimental API.
-// NOTE: timestamps are not supported with this API.
+// NOTE: timestamps and headers are not supported with this API.
 func (p *Producer) produceBatch(topic string, msgs []*Message, msgFlags int) error {
 	crkt := p.handle.getRkt(topic)
 
@@ -239,13 +356,21 @@ func (p *Producer) Close() {
 //
 //
 // Supported special configuration properties:
-//   go.batch.producer (bool, false) - Enable batch producer (experimental for increased performance).
+//   go.batch.producer (bool, false) - EXPERIMENTAL: Enable batch producer (for increased performance).
 //                                     These batches do not relate to Kafka message batches in any way.
+//                                     Note: timestamps and headers are not supported with this interface.
 //   go.delivery.reports (bool, true) - Forward per-message delivery reports to the
 //                                      Events() channel.
+//   go.events.channel.size (int, 1000000) - Events() channel size
 //   go.produce.channel.size (int, 1000000) - ProduceChannel() buffer size (in number of messages)
 //
 func NewProducer(conf *ConfigMap) (*Producer, error) {
+
+	err := versionCheck()
+	if err != nil {
+		return nil, err
+	}
+
 	p := &Producer{}
 
 	v, err := conf.extract("go.batch.producer", false)
@@ -260,11 +385,23 @@ func NewProducer(conf *ConfigMap) (*Producer, error) {
 	}
 	p.handle.fwdDr = v.(bool)
 
+	v, err = conf.extract("go.events.channel.size", 1000000)
+	if err != nil {
+		return nil, err
+	}
+	eventsChanSize := v.(int)
+
 	v, err = conf.extract("go.produce.channel.size", 1000000)
 	if err != nil {
 		return nil, err
 	}
 	produceChannelSize := v.(int)
+
+	v, _ = conf.extract("{topic}.produce.offset.report", nil)
+	if v == nil {
+		// Enable offset reporting by default, unless overriden.
+		conf.SetKey("{topic}.produce.offset.report", true)
+	}
 
 	// Convert ConfigMap to librdkafka conf_t
 	cConf, err := conf.convert()
@@ -286,7 +423,7 @@ func NewProducer(conf *ConfigMap) (*Producer, error) {
 	p.handle.p = p
 	p.handle.setup()
 	p.handle.rkq = C.rd_kafka_queue_get_main(p.handle.rk)
-	p.events = make(chan Event, 1000000)
+	p.events = make(chan Event, eventsChanSize)
 	p.produceChannel = make(chan *Message, produceChannelSize)
 	p.pollerTermChan = make(chan bool)
 
@@ -404,4 +541,22 @@ func (p *Producer) GetMetadata(topic *string, allTopics bool, timeoutMs int) (*M
 // and partition.
 func (p *Producer) QueryWatermarkOffsets(topic string, partition int32, timeoutMs int) (low, high int64, err error) {
 	return queryWatermarkOffsets(p, topic, partition, timeoutMs)
+}
+
+// OffsetsForTimes looks up offsets by timestamp for the given partitions.
+//
+// The returned offset for each partition is the earliest offset whose
+// timestamp is greater than or equal to the given timestamp in the
+// corresponding partition.
+//
+// The timestamps to query are represented as `.Offset` in the `times`
+// argument and the looked up offsets are represented as `.Offset` in the returned
+// `offsets` list.
+//
+// The function will block for at most timeoutMs milliseconds.
+//
+// Duplicate Topic+Partitions are not supported.
+// Per-partition errors may be returned in the `.Error` field.
+func (p *Producer) OffsetsForTimes(times []TopicPartition, timeoutMs int) (offsets []TopicPartition, err error) {
+	return offsetsForTimes(p, times, timeoutMs)
 }

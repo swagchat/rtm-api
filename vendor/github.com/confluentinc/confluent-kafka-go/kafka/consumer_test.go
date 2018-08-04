@@ -18,9 +18,11 @@ package kafka
 
 import (
 	"fmt"
+	"os"
 	"reflect"
 	"sort"
 	"testing"
+	"time"
 )
 
 // TestConsumerAPIs dry-tests most Consumer APIs, no broker is needed.
@@ -32,9 +34,11 @@ func TestConsumerAPIs(t *testing.T) {
 	}
 
 	c, err = NewConsumer(&ConfigMap{
-		"group.id":           "gotest",
-		"socket.timeout.ms":  10,
-		"session.timeout.ms": 10})
+		"group.id":                 "gotest",
+		"socket.timeout.ms":        10,
+		"session.timeout.ms":       10,
+		"enable.auto.offset.store": false, // permit StoreOffsets()
+	})
 	if err != nil {
 		t.Fatalf("%s", err)
 	}
@@ -65,6 +69,21 @@ func TestConsumerAPIs(t *testing.T) {
 		t.Errorf("Unsubscribe failed: %s", err)
 	}
 
+	topic := "gotest"
+	stored, err := c.StoreOffsets([]TopicPartition{{Topic: &topic, Partition: 0, Offset: 1}})
+	if err != nil && err.(Error).Code() != ErrUnknownPartition {
+		t.Errorf("StoreOffsets() failed: %s", err)
+		toppar := stored[0]
+		if toppar.Error != nil && toppar.Error.(Error).Code() == ErrUnknownPartition {
+			t.Errorf("StoreOffsets() TopicPartition error: %s", toppar.Error)
+		}
+	}
+	var empty []TopicPartition
+	stored, err = c.StoreOffsets(empty)
+	if err != nil {
+		t.Errorf("StoreOffsets(empty) failed: %s", err)
+	}
+
 	topic1 := "gotest1"
 	topic2 := "gotest2"
 	err = c.Assign([]TopicPartition{{Topic: &topic1, Partition: 2},
@@ -78,9 +97,42 @@ func TestConsumerAPIs(t *testing.T) {
 		t.Errorf("Seek failed: %s", err)
 	}
 
+	// Pause & Resume
+	err = c.Pause([]TopicPartition{{Topic: &topic1, Partition: 2},
+		{Topic: &topic2, Partition: 1}})
+	if err != nil {
+		t.Errorf("Pause failed: %s", err)
+	}
+	err = c.Resume([]TopicPartition{{Topic: &topic1, Partition: 2},
+		{Topic: &topic2, Partition: 1}})
+	if err != nil {
+		t.Errorf("Resume failed: %s", err)
+	}
+
 	err = c.Unassign()
 	if err != nil {
 		t.Errorf("Unassign failed: %s", err)
+	}
+
+	topic = "mytopic"
+	// OffsetsForTimes
+	offsets, err := c.OffsetsForTimes([]TopicPartition{{Topic: &topic, Offset: 12345}}, 100)
+	t.Logf("OffsetsForTimes() returned Offsets %s and error %s\n", offsets, err)
+	if err == nil {
+		t.Errorf("OffsetsForTimes() should have failed\n")
+	}
+	if offsets != nil {
+		t.Errorf("OffsetsForTimes() failed but returned non-nil Offsets: %s\n", offsets)
+	}
+
+	// Committed
+	offsets, err = c.Committed([]TopicPartition{{Topic: &topic, Partition: 5}}, 10)
+	t.Logf("Committed() returned Offsets %s and error %s\n", offsets, err)
+	if err == nil {
+		t.Errorf("Committed() should have failed\n")
+	}
+	if offsets != nil {
+		t.Errorf("Committed() failed but returned non-nil Offsets: %s\n", offsets)
 	}
 
 	err = c.Close()
@@ -149,6 +201,39 @@ func TestConsumerAssignment(t *testing.T) {
 
 	t.Logf("Compare Assignment %v to original list of partitions %v\n",
 		assignment, partitions)
+
+	// Use Logf instead of Errorf for timeout-checking errors on CI builds
+	// since CI environments are unreliable timing-wise.
+	tmoutFunc := t.Errorf
+	_, onCi := os.LookupEnv("CI")
+	if onCi {
+		tmoutFunc = t.Logf
+	}
+
+	// Test ReadMessage()
+	for _, tmout := range []time.Duration{0, 200 * time.Millisecond} {
+		start := time.Now()
+		m, err := c.ReadMessage(tmout)
+		duration := time.Since(start)
+
+		t.Logf("ReadMessage(%v) ret %v and %v in %v", tmout, m, err, duration)
+		if m != nil || err == nil {
+			t.Errorf("Expected ReadMessage to fail: %v, %v", m, err)
+		}
+		if err.(Error).Code() != ErrTimedOut {
+			t.Errorf("Expected ReadMessage to fail with ErrTimedOut, not %v", err)
+		}
+
+		if tmout == 0 {
+			if duration.Seconds() > 0.1 {
+				tmoutFunc("Expected ReadMessage(%v) to fail after max 100ms, not %v", tmout, duration)
+			}
+		} else if tmout > 0 {
+			if duration.Seconds() < tmout.Seconds()*0.75 || duration.Seconds() > tmout.Seconds()*1.25 {
+				tmoutFunc("Expected ReadMessage() to fail after %v -+25%%, not %v", tmout, duration)
+			}
+		}
+	}
 
 	// reflect.DeepEqual() can't be used since TopicPartition.Topic
 	// is a pointer to a string rather than a string and the pointer

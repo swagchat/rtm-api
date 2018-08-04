@@ -64,11 +64,6 @@
       "location": "query",
       "type": "string"
     },
-    "bearer_token": {
-      "description": "OAuth bearer token.",
-      "location": "query",
-      "type": "string"
-    },
     "callback": {
       "description": "JSONP",
       "location": "query",
@@ -88,12 +83,6 @@
       "description": "OAuth 2.0 token for the current user.",
       "location": "query",
       "type": "string"
-    },
-    "pp": {
-      "default": "true",
-      "description": "Pretty-print response.",
-      "location": "query",
-      "type": "boolean"
     },
     "prettyPrint": {
       "default": "true",
@@ -206,7 +195,7 @@
         "locations": {
           "methods": {
             "get": {
-              "description": "Get information about a location.",
+              "description": "Gets information about a location.",
               "flatPath": "v1beta4/apps/{appsId}/locations/{locationsId}",
               "httpMethod": "GET",
               "id": "appengine.apps.locations.get",
@@ -938,7 +927,7 @@
       }
     }
   },
-  "revision": "20180307",
+  "revision": "20180707",
   "rootUrl": "https://appengine.googleapis.com/",
   "schemas": {
     "ApiConfigHandler": {
@@ -1173,6 +1162,17 @@
       },
       "type": "object"
     },
+    "CreateVersionMetadataV1": {
+      "description": "Metadata for the given google.longrunning.Operation during a google.appengine.v1.CreateVersionRequest.",
+      "id": "CreateVersionMetadataV1",
+      "properties": {
+        "cloudBuildId": {
+          "description": "The Cloud Build ID if one was created as part of the version create. @OutputOnly",
+          "type": "string"
+        }
+      },
+      "type": "object"
+    },
     "CreateVersionMetadataV1Alpha": {
       "description": "Metadata for the given google.longrunning.Operation during a google.appengine.v1alpha.CreateVersionRequest.",
       "id": "CreateVersionMetadataV1Alpha",
@@ -1259,15 +1259,33 @@
       "type": "object"
     },
     "EndpointsApiService": {
-      "description": "Cloud Endpoints (https://cloud.google.com/endpoints) configuration. The Endpoints API Service provides tooling for serving Open API and gRPC endpoints via an NGINX proxy.The fields here refer to the name and configuration id of a \"service\" resource in the Service Management API (https://cloud.google.com/service-management/overview).",
+      "description": "Cloud Endpoints (https://cloud.google.com/endpoints) configuration. The Endpoints API Service provides tooling for serving Open API and gRPC endpoints via an NGINX proxy. Only valid for App Engine Flexible environment deployments..The fields here refer to the name and configuration id of a \"service\" resource in the Service Management API (https://cloud.google.com/service-management/overview).",
       "id": "EndpointsApiService",
       "properties": {
         "configId": {
           "description": "Endpoints service configuration id as specified by the Service Management API. For example \"2016-09-19r1\"By default, the Endpoints service configuration id is fixed and config_id must be specified. To keep the Endpoints service configuration id updated with each rollout, specify RolloutStrategy.MANAGED and omit config_id.",
           "type": "string"
         },
+        "disableTraceSampling": {
+          "description": "Enable or disable trace sampling. By default, this is set to false for enabled.",
+          "type": "boolean"
+        },
         "name": {
           "description": "Endpoints service name which is the name of the \"service\" resource in the Service Management API. For example \"myapi.endpoints.myproject.cloud.goog\"",
+          "type": "string"
+        },
+        "rolloutStrategy": {
+          "description": "Endpoints rollout strategy. If FIXED, config_id must be specified. If MANAGED, config_id must be omitted.",
+          "enum": [
+            "UNSPECIFIED_ROLLOUT_STRATEGY",
+            "FIXED",
+            "MANAGED"
+          ],
+          "enumDescriptions": [
+            "Not specified. Defaults to FIXED.",
+            "Endpoints service configuration id will be fixed to the configuration id specified by config_id.",
+            "Endpoints service configuration id will be updated with each rollout."
+          ],
           "type": "string"
         }
       },
@@ -1781,6 +1799,9 @@
       "description": "Metadata for the given google.longrunning.Operation.",
       "id": "OperationMetadataV1",
       "properties": {
+        "createVersionMetadata": {
+          "$ref": "CreateVersionMetadataV1"
+        },
         "endTime": {
           "description": "Time that this operation completed.@OutputOnly",
           "format": "google-datetime",
