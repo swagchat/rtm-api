@@ -1,6 +1,7 @@
 package config
 
 import (
+	"errors"
 	"flag"
 	"fmt"
 	"io/ioutil"
@@ -18,11 +19,18 @@ const (
 	APIVersion = "0"
 	// BuildVersion is API build version
 	BuildVersion = "0.3.0"
+
+	CtxSubscription
+	CtxTracerTransaction
+	CtxTracerSpan
 )
 
 var (
-	cfg           = NewConfig()
-	IsShowVersion bool
+	cfg         = NewConfig()
+	showVersion = false
+	showHelp    = false
+	// StopRun is a flag for stop run server
+	StopRun = false
 )
 
 type config struct {
@@ -33,14 +41,39 @@ type config struct {
 	ReadBufferSize  int
 	WriteBufferSize int
 	MaxMessageSize  int64
-
-	Logging   *Logging
-	Messaging *Messaging
-	Metrics   *Metrics
+	Logging         *Logging
+	Logger          *Logger
+	Tracer          *Tracer
+	Messaging       *Messaging
+	Metrics         *Metrics
 }
 
+// Logger is settings of logger
 type Logging struct {
 	Level string
+}
+
+// Logger is settings of logger
+type Logger struct {
+	// EnableConsole is a flag for enable console log.
+	EnableConsole bool `yaml:"enableConsole"`
+	// ConsoleFormat is a format for console log.
+	ConsoleFormat string `yaml:"consoleFormat"`
+	// ConsoleLevel is a level for console log.
+	ConsoleLevel string `yaml:"consoleLevel"`
+	// EnableFile is a flag for enable file log.
+	EnableFile bool `yaml:"enableFile"`
+	// FileFormat is a format for file log.
+	FileFormat string `yaml:"fileFormat"`
+	// FileLevel is a log level for file log.
+	FileLevel string `yaml:"fileLevel"`
+	// FilePath is a file path for file log.
+	FilePath string `yaml:"filePath"`
+}
+
+// Tracer is settings of tracer
+type Tracer struct {
+	Provider string
 }
 
 type Messaging struct {
@@ -79,6 +112,30 @@ type Metrics struct {
 func NewConfig() *config {
 	log.SetFlags(log.Llongfile)
 
+	c := defaultSetting()
+	c.loadEnv()
+
+	c.loadYaml()
+	c.parseFlag()
+
+	err := c.validate()
+	if err != nil {
+		log.Fatalf("Invalid setting. %v", err)
+	}
+
+	err = c.after()
+	if err != nil {
+		log.Fatalf("%v", err)
+	}
+
+	return c
+}
+
+func Config() *config {
+	return cfg
+}
+
+func defaultSetting() *config {
 	logging := &Logging{
 		Level: "development",
 	}
@@ -94,20 +151,18 @@ func NewConfig() *config {
 		WriteBufferSize: 1024,
 		MaxMessageSize:  8192,
 		Logging:         logging,
-		Messaging:       messaging,
-		Metrics:         metrics,
+		Logger: &Logger{
+			EnableConsole: true,
+			ConsoleFormat: "text",
+			ConsoleLevel:  "debug",
+			EnableFile:    false,
+		},
+		Tracer:    &Tracer{},
+		Messaging: messaging,
+		Metrics:   metrics,
 	}
 
-	c.loadYaml()
-	c.loadEnvironment()
-	c.parseFlag()
-	c.after()
-
 	return c
-}
-
-func Config() *config {
-	return cfg
 }
 
 func (c *config) loadYaml() {
@@ -115,7 +170,7 @@ func (c *config) loadYaml() {
 	yaml.Unmarshal(buf, c)
 }
 
-func (c *config) loadEnvironment() {
+func (c *config) loadEnv() {
 	var v string
 
 	if v = os.Getenv("HTTP_PORT"); v != "" {
@@ -157,6 +212,43 @@ func (c *config) loadEnvironment() {
 	// Logging
 	if v = os.Getenv("RTM_LOGGING_LEVEL"); v != "" {
 		c.Logging.Level = v
+	}
+
+	// Logging
+	flag.BoolVar(&c.Logger.EnableConsole, "logger.enableConsole", c.Logger.EnableConsole, "")
+	flag.StringVar(&c.Logger.ConsoleFormat, "logger.consoleFormat", c.Logger.ConsoleFormat, "")
+	flag.StringVar(&c.Logger.ConsoleLevel, "logger.consoleLevel", c.Logger.ConsoleLevel, "")
+	flag.BoolVar(&c.Logger.EnableFile, "logger.enableFile", c.Logger.EnableFile, "")
+	flag.StringVar(&c.Logger.FileFormat, "logger.fileFormat", c.Logger.FileFormat, "")
+	flag.StringVar(&c.Logger.FileLevel, "logger.fileLevel", c.Logger.FileLevel, "")
+	flag.StringVar(&c.Logger.FilePath, "logger.filePath", c.Logger.FilePath, "")
+
+	// Logger
+	if v = os.Getenv("SWAG_LOGGER_ENABLE_CONSOLE"); v == "true" {
+		c.Logger.EnableConsole = true
+	}
+	if v = os.Getenv("SWAG_LOGGER_CONSOLE_FORMAT"); v != "" {
+		c.Logger.ConsoleFormat = v
+	}
+	if v = os.Getenv("SWAG_LOGGER_CONSOLE_LEVEL"); v != "" {
+		c.Logger.ConsoleLevel = v
+	}
+	if v = os.Getenv("SWAG_LOGGER_ENABLE_FILE"); v == "true" {
+		c.Logger.EnableFile = true
+	}
+	if v = os.Getenv("SWAG_LOGGER_FILE_FORMAT"); v != "" {
+		c.Logger.FileFormat = v
+	}
+	if v = os.Getenv("SWAG_LOGGER_FILE_LEVEL"); v != "" {
+		c.Logger.FileLevel = v
+	}
+	if v = os.Getenv("SWAG_LOGGER_FILE_PATH"); v != "" {
+		c.Logger.FilePath = v
+	}
+
+	// Tracer
+	if v = os.Getenv("SWAG_TRACER_PROVIDER"); v != "" {
+		c.Tracer.Provider = v
 	}
 
 	// messaging
@@ -237,8 +329,8 @@ func (c *config) loadEnvironment() {
 }
 
 func (c *config) parseFlag() {
-	flag.BoolVar(&IsShowVersion, "v", false, "")
-	flag.BoolVar(&IsShowVersion, "version", false, "show version")
+	flag.BoolVar(&showVersion, "v", false, "")
+	flag.BoolVar(&showVersion, "version", false, "show version")
 
 	flag.StringVar(&c.HTTPPort, "httpPort", c.HTTPPort, "")
 
@@ -254,6 +346,9 @@ func (c *config) parseFlag() {
 
 	// Logging
 	flag.StringVar(&c.Logging.Level, "logging.level", c.Logging.Level, "")
+
+	// Tracer
+	flag.StringVar(&c.Tracer.Provider, "tracer.provider", c.Tracer.Provider, "")
 
 	// messaging
 	flag.StringVar(&c.Messaging.Provider, "messaging.provider", c.Messaging.Provider, "")
@@ -288,7 +383,36 @@ func (c *config) parseFlag() {
 	flag.Parse()
 }
 
-func (c *config) after() {
+func (c *config) validate() error {
+	// Logger
+	if c.Logger.EnableConsole {
+		f := c.Logger.ConsoleFormat
+		if f == "" || !(f == "text" || f == "json") {
+			return errors.New("Please set logger.consoleFormat to \"text\" or \"json\"")
+		}
+		l := c.Logger.ConsoleLevel
+		if l == "" || !(l == "debug" || l == "info" || l == "warn" || l == "error") {
+			return errors.New("Please set logger.consoleLevel to \"debug\" or \"info\" or \"warn\" or \"error\"")
+		}
+	}
+	if c.Logger.EnableFile {
+		f := c.Logger.FileFormat
+		if f == "" || !(f == "text" || f == "json") {
+			return errors.New("Please set logger.fileFormat to \"text\" or \"json\"")
+		}
+		l := c.Logger.FileLevel
+		if l == "" || !(l == "debug" || l == "info" || l == "warn" || l == "error") {
+			return errors.New("Please set logger.fileLevel to \"debug\" or \"info\" or \"warn\" or \"error\"")
+		}
+		if c.Logger.FilePath == "" {
+			return errors.New("Please set logger.filePath")
+		}
+	}
+
+	return nil
+}
+
+func (c *config) after() error {
 	if c.Metrics.Provider == "elasticsearch" {
 		if c.Metrics.Elasticsearch.Index == "" {
 			c.Metrics.Elasticsearch.Index = fmt.Sprintf("%s-%s", AppName, "metrics")
@@ -303,4 +427,6 @@ func (c *config) after() {
 	if c.Metrics.Interval == 0 {
 		c.Metrics.Interval = 5
 	}
+
+	return nil
 }

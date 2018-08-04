@@ -14,10 +14,58 @@
   version = "v0.5.0"
 
 [[projects]]
+  branch = "master"
+  name = "github.com/betchi/zapper"
+  packages = ["."]
+  revision = "882ad99315ee9b7dd242eb9e45916c597e8270e7"
+
+[[projects]]
+  branch = "master"
+  name = "github.com/codahale/hdrhistogram"
+  packages = ["."]
+  revision = "3a0bb77429bd3a61596f5e8a3172445844342120"
+
+[[projects]]
   name = "github.com/confluentinc/confluent-kafka-go"
   packages = ["kafka"]
   revision = "5e4d04e05fc319ce5996a867aafef29059f26862"
   version = "v0.11.4"
+
+[[projects]]
+  name = "github.com/elastic/apm-agent-go"
+  packages = [".","internal/apmdebug","internal/apmhttputil","internal/apmstrings","internal/fastjson","internal/krtext","internal/pretty","internal/radix","internal/uuid","model","stacktrace","transport"]
+  revision = "a22839728ee5955c96524d56af60813250d26a5b"
+  version = "v0.4.0"
+
+[[projects]]
+  name = "github.com/elastic/apm-server"
+  packages = ["config","model","processor","processor/error","processor/transaction","sourcemap","utility"]
+  revision = "ef78610de1a796723c54f62455ce71cfd15d7c27"
+  version = "v6.3.2"
+
+[[projects]]
+  name = "github.com/elastic/beats"
+  packages = ["libbeat/beat","libbeat/common","libbeat/common/atomic","libbeat/common/cfgwarn","libbeat/common/dtfmt","libbeat/common/file","libbeat/common/fmtstr","libbeat/common/match","libbeat/common/streambuf","libbeat/logp","libbeat/monitoring","libbeat/outputs","libbeat/outputs/codec","libbeat/outputs/elasticsearch","libbeat/outputs/outil","libbeat/outputs/transport","libbeat/paths","libbeat/plugin","libbeat/processors","libbeat/publisher","libbeat/testing"]
+  revision = "45a9a9e1561b6c540e94211ebe03d18abcacae55"
+  version = "v6.3.2"
+
+[[projects]]
+  name = "github.com/elastic/go-structform"
+  packages = [".","gotype","internal/unsafe","json","visitors"]
+  revision = "0ea09ff9b43c387dd183a4088f6d573bf823e4ed"
+  version = "v0.0.4"
+
+[[projects]]
+  name = "github.com/elastic/go-ucfg"
+  packages = [".","cfgutil","flag","internal/parse","json","yaml"]
+  revision = "581f7b1fe9d84f4c18ef0694d6e0eb944a925dae"
+  version = "v0.6.1"
+
+[[projects]]
+  name = "github.com/fatih/color"
+  packages = ["."]
+  revision = "5b77d2a35fb0ede96d138fc9a99f5c9b6aef11b4"
+  version = "v1.7.0"
 
 [[projects]]
   name = "github.com/fatih/structs"
@@ -30,6 +78,12 @@
   packages = ["."]
   revision = "90f0b59102629831cc109845475a8d77043412ec"
   version = "v1.0.0"
+
+[[projects]]
+  name = "github.com/go-sourcemap/sourcemap"
+  packages = [".","internal/base64vlq"]
+  revision = "b019cc30c1eaa584753491b0d8f8c1534bf1eb44"
+  version = "v2.1.2"
 
 [[projects]]
   name = "github.com/go-zoo/bone"
@@ -75,9 +129,33 @@
 
 [[projects]]
   branch = "master"
+  name = "github.com/joeshaw/multierror"
+  packages = ["."]
+  revision = "69b34d4ec901851247ae7e77d33909caf9df99ed"
+
+[[projects]]
+  branch = "master"
+  name = "github.com/kylelemons/godebug"
+  packages = ["diff","pretty"]
+  revision = "d65d576e9348f5982d7f6d83682b694e731a45c6"
+
+[[projects]]
+  branch = "master"
   name = "github.com/mailru/easyjson"
   packages = [".","buffer","jlexer","jwriter"]
   revision = "03f2033d19d5860aef995fe360ac7d395cd8ce65"
+
+[[projects]]
+  name = "github.com/mattn/go-colorable"
+  packages = ["."]
+  revision = "167de6bfdfba052fa6b2d3664c8f5272e23c9072"
+  version = "v0.0.9"
+
+[[projects]]
+  name = "github.com/mattn/go-isatty"
+  packages = ["."]
+  revision = "0360b2af4f38e8d38c7fce2a9f4e702702d73a39"
+  version = "v0.0.3"
 
 [[projects]]
   name = "github.com/nsqio/go-nsq"
@@ -92,10 +170,28 @@
   version = "v6.1.27"
 
 [[projects]]
+  name = "github.com/opentracing/opentracing-go"
+  packages = [".","ext","log"]
+  revision = "1949ddbfd147afd4d964a9f00b24eb291e0e7c38"
+  version = "v1.0.2"
+
+[[projects]]
+  name = "github.com/patrickmn/go-cache"
+  packages = ["."]
+  revision = "a3647f8e31d79543b2d0f0ae2fe5c379d72cedc0"
+  version = "v2.1.0"
+
+[[projects]]
   name = "github.com/pkg/errors"
   packages = ["."]
   revision = "645ef00459ed84a119197bfb8d8205042c6df63d"
   version = "v0.8.0"
+
+[[projects]]
+  name = "github.com/santhosh-tekuri/jsonschema"
+  packages = [".","decoders","formats","loader","mediatypes"]
+  revision = "1471bfd74cff003b1e329d46a4de4487e88cc47b"
+  version = "v1.2.2"
 
 [[projects]]
   name = "github.com/satori/go.uuid"
@@ -114,6 +210,18 @@
   name = "github.com/swagchat/protobuf"
   packages = ["protoc-gen-go"]
   revision = "066902766d7f165c71ee29bcf0bdd45e27eb9f06"
+
+[[projects]]
+  name = "github.com/uber/jaeger-client-go"
+  packages = [".","config","internal/baggage","internal/baggage/remote","internal/spanlog","internal/throttler","internal/throttler/remote","log","rpcmetrics","thrift","thrift-gen/agent","thrift-gen/baggage","thrift-gen/jaeger","thrift-gen/sampling","thrift-gen/zipkincore","utils"]
+  revision = "b043381d944715b469fd6b37addfd30145ca1758"
+  version = "v2.14.0"
+
+[[projects]]
+  name = "github.com/uber/jaeger-lib"
+  packages = ["metrics"]
+  revision = "ed3a127ec5fef7ae9ea95b01b542c47fbd999ce5"
+  version = "v1.5.0"
 
 [[projects]]
   name = "go.opencensus.io"
@@ -135,14 +243,14 @@
 
 [[projects]]
   name = "go.uber.org/zap"
-  packages = [".","buffer","internal/bufferpool","internal/color","internal/exit","zapcore"]
+  packages = [".","buffer","internal/bufferpool","internal/color","internal/exit","zapcore","zaptest/observer"]
   revision = "4d45f9617f7d90f7a663ff21c7a4321dbe78098b"
   version = "v1.9.0"
 
 [[projects]]
   branch = "master"
   name = "golang.org/x/net"
-  packages = ["context","context/ctxhttp","http/httpguts","http2","http2/hpack","idna","internal/timeseries","trace"]
+  packages = ["context","context/ctxhttp","http/httpguts","http2","http2/hpack","idna","internal/socks","internal/timeseries","proxy","trace"]
   revision = "f4c29de78a2a91c00474a2e689954305c350adf9"
 
 [[projects]]
@@ -154,7 +262,7 @@
 [[projects]]
   branch = "master"
   name = "golang.org/x/sys"
-  packages = ["unix"]
+  packages = ["unix","windows","windows/registry","windows/svc/eventlog"]
   revision = "0ffbfd41fbef8ffcf9b62b0b0aa3a5873ed7a4fe"
 
 [[projects]]
@@ -188,6 +296,12 @@
   version = "v1.14.0"
 
 [[projects]]
+  name = "gopkg.in/natefinch/lumberjack.v2"
+  packages = ["."]
+  revision = "a96e63847dc3c67d17befa69c303767e2f84e54f"
+  version = "v2.1"
+
+[[projects]]
   name = "gopkg.in/yaml.v2"
   packages = ["."]
   revision = "5420a8b6744d3b0345ab293f6fcba19c978f1183"
@@ -196,6 +310,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "258727cf45bf2918085020a92f0ddd47656a4a8ed8ceaf752ec07e7c06eccc33"
+  inputs-digest = "2ac36c775af6a1da3d49f346e61ac6647c401a98dbd28939ed4aa583b9f8b145"
   solver-name = "gps-cdcl"
   solver-version = 1

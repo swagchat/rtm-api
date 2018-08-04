@@ -1,0 +1,16 @@
+{
+    "service": {
+        "name": "1234_service-12a3",
+        "agent": {
+          "name": "python",
+          "version": "1.0"
+        }
+    },
+    "errors": [
+        {
+            "exception": {
+                "message": ""
+            }
+        }
+    ]
+}
