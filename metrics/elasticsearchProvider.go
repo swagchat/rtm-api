@@ -6,15 +6,15 @@ import (
 	"time"
 
 	"github.com/olivere/elastic"
+	"github.com/swagchat/rtm-api/config"
 	"github.com/swagchat/rtm-api/logging"
-	"github.com/swagchat/rtm-api/utils"
 	"go.uber.org/zap/zapcore"
 )
 
 type elasticsearchProvider struct{}
 
 func (ep *elasticsearchProvider) Run() {
-	c := utils.Config()
+	c := config.Config()
 	client, err := elastic.NewClient(elastic.SetURL(c.Metrics.Elasticsearch.URL))
 	if err != nil {
 		logging.Log(zapcore.ErrorLevel, &logging.AppLog{

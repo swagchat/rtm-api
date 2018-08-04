@@ -4,8 +4,8 @@ import (
 	"encoding/json"
 	"fmt"
 
+	scpb "github.com/swagchat/protobuf/protoc-gen-go"
 	"github.com/swagchat/rtm-api/logging"
-	"github.com/swagchat/rtm-api/models"
 	"go.uber.org/zap/zapcore"
 )
 
@@ -88,7 +88,7 @@ func (s *server) Run() {
 }
 
 func (s *server) broadcast(message []byte) {
-	var rtmEvent models.RTMEvent
+	var rtmEvent scpb.Message
 	json.Unmarshal(message, &rtmEvent)
 
 	if _, ok := s.Connection.events[rtmEvent.Type]; !ok {

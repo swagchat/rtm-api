@@ -3,6 +3,7 @@ package metrics
 import (
 	"time"
 
+	"github.com/swagchat/rtm-api/config"
 	"github.com/swagchat/rtm-api/logging"
 	"github.com/swagchat/rtm-api/utils"
 	"go.uber.org/zap/zapcore"
@@ -11,7 +12,7 @@ import (
 type stdoutProvider struct{}
 
 func (sp *stdoutProvider) Run() {
-	c := utils.Config()
+	c := config.Config()
 	exec(func() {
 		l, _ := time.LoadLocation("Etc/GMT")
 		nowTime := time.Unix(time.Now().Unix(), 0).In(l)

@@ -7,6 +7,7 @@ import (
 	"syscall"
 
 	"github.com/confluentinc/confluent-kafka-go/kafka"
+	"github.com/swagchat/rtm-api/config"
 	"github.com/swagchat/rtm-api/logging"
 	"github.com/swagchat/rtm-api/rtm"
 	"github.com/swagchat/rtm-api/utils"
@@ -18,7 +19,7 @@ var KafkaConsumer *kafka.Consumer
 type kafkaProvider struct{}
 
 func (kp *kafkaProvider) Subscribe() {
-	cfg := utils.Config()
+	cfg := config.Config()
 
 	sigchan := make(chan os.Signal, 1)
 	signal.Notify(sigchan, syscall.SIGINT, syscall.SIGTERM)

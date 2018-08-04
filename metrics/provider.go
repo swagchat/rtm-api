@@ -5,8 +5,8 @@ import (
 	"time"
 
 	stats "github.com/fukata/golang-stats-api-handler"
+	"github.com/swagchat/rtm-api/config"
 	"github.com/swagchat/rtm-api/rtm"
-	"github.com/swagchat/rtm-api/utils"
 )
 
 type Metrics struct {
@@ -25,7 +25,7 @@ type provider interface {
 }
 
 func Provider() provider {
-	c := utils.Config()
+	c := config.Config()
 
 	var p provider
 	switch c.Metrics.Provider {
@@ -40,7 +40,7 @@ func Provider() provider {
 }
 
 func makeMetrics(nowTime time.Time) *Metrics {
-	c := utils.Config()
+	c := config.Config()
 	m := &Metrics{}
 
 	hostname, _ := os.Hostname()

@@ -1,7 +1,7 @@
 package messaging
 
 import (
-	"github.com/swagchat/rtm-api/utils"
+	"github.com/swagchat/rtm-api/config"
 )
 
 type MessagingInfo struct {
@@ -14,7 +14,7 @@ type provider interface {
 }
 
 func Provider() provider {
-	c := utils.Config()
+	c := config.Config()
 
 	var p provider
 	switch c.Messaging.Provider {

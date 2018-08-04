@@ -11,7 +11,8 @@ import (
 	"log"
 
 	"github.com/gorilla/websocket"
-	"github.com/swagchat/rtm-api/models"
+	scpb "github.com/swagchat/protobuf/protoc-gen-go"
+	"github.com/swagchat/rtm-api/config"
 	"github.com/swagchat/rtm-api/utils"
 	speechpb "google.golang.org/genproto/googleapis/cloud/speech/v1"
 )
@@ -30,7 +31,7 @@ func (c *SpeechClient) ReadPump() {
 		stream.CloseSend()
 		c.Conn.Close()
 	}()
-	c.Conn.SetReadLimit(utils.Config().MaxMessageSize)
+	c.Conn.SetReadLimit(config.Config().MaxMessageSize)
 	c.Conn.SetPongHandler(func(string) error { c.Conn.SetReadDeadline(time.Now().Add(pongWait)); return nil })
 
 	//log.Println("ReadPumpSpeech-------start")
@@ -111,7 +112,7 @@ func PostSpeech(c *SpeechClient, data []byte) {
 					payload := &utils.JSONText{}
 					ps := utils.AppendStrings("{\"text\":\"", transcript, "\"}")
 					payload.UnmarshalJSON([]byte(ps))
-					m := &models.Message{
+					m := &scpb.Message{
 						EventName: "speech2text",
 						Payload:   *payload,
 					}

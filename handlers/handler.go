@@ -16,6 +16,7 @@ import (
 	"github.com/go-zoo/bone"
 	"github.com/gorilla/websocket"
 	"github.com/shogo82148/go-gracedown"
+	"github.com/swagchat/rtm-api/config"
 	"github.com/swagchat/rtm-api/logging"
 	"github.com/swagchat/rtm-api/rtm"
 	"github.com/swagchat/rtm-api/utils"
@@ -54,12 +55,12 @@ func StartServer(ctx context.Context) {
 
 	go run(ctx)
 
-	c := utils.Config()
+	c := config.Config()
 	sb := utils.NewStringBuilder()
 	cfgStr := sb.PrintStruct("config", c)
 	logging.Log(zapcore.InfoLevel, &logging.AppLog{
 		Kind:    "handler",
-		Message: fmt.Sprintf("%s start", utils.AppName),
+		Message: fmt.Sprintf("%s start", config.AppName),
 		Config:  cfgStr,
 	})
 
@@ -82,7 +83,7 @@ func run(ctx context.Context) {
 			if s == syscall.SIGTERM || s == syscall.SIGINT {
 				logging.Log(zapcore.InfoLevel, &logging.AppLog{
 					Kind:    "handler",
-					Message: fmt.Sprintf("%s graceful down by signal[%s]", utils.AppName, s.String()),
+					Message: fmt.Sprintf("%s graceful down by signal[%s]", config.AppName, s.String()),
 				})
 				gracedown.Close()
 			}
@@ -91,7 +92,7 @@ func run(ctx context.Context) {
 }
 
 func indexHandler(w http.ResponseWriter, r *http.Request) {
-	respond(w, r, http.StatusOK, "text/plain", fmt.Sprintf("%s [API Version]%s [Build Version]%s", utils.AppName, utils.APIVersion, utils.BuildVersion))
+	respond(w, r, http.StatusOK, "text/plain", fmt.Sprintf("%s [API Version]%s [Build Version]%s", config.AppName, config.APIVersion, config.BuildVersion))
 }
 
 func messageHandler(w http.ResponseWriter, r *http.Request) {
@@ -158,16 +159,16 @@ func speechHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 var upgrader = websocket.Upgrader{
-	ReadBufferSize:  utils.Config().ReadBufferSize,
-	WriteBufferSize: utils.Config().WriteBufferSize,
+	ReadBufferSize:  config.Config().ReadBufferSize,
+	WriteBufferSize: config.Config().WriteBufferSize,
 	CheckOrigin: func(r *http.Request) bool {
 		return true
 	},
 }
 
 var speechUpgrader = websocket.Upgrader{
-	ReadBufferSize:  utils.Config().ReadBufferSize,
-	WriteBufferSize: utils.Config().WriteBufferSize,
+	ReadBufferSize:  config.Config().ReadBufferSize,
+	WriteBufferSize: config.Config().WriteBufferSize,
 	CheckOrigin: func(r *http.Request) bool {
 		return true
 	},

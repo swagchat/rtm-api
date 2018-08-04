@@ -3,7 +3,7 @@ package logging
 import (
 	"os"
 
-	"github.com/swagchat/rtm-api/utils"
+	"github.com/swagchat/rtm-api/config"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 )
@@ -27,7 +27,7 @@ type AppLog struct {
 }
 
 func NewAppLogger() *zap.Logger {
-	c := utils.Config()
+	c := config.Config()
 
 	var err error
 	var logger *zap.Logger
@@ -43,9 +43,9 @@ func NewAppLogger() *zap.Logger {
 	}
 	hostname, _ := os.Hostname()
 	appLogger := logger.WithOptions(zap.Fields(
-		zap.String("appName", utils.AppName),
-		zap.String("apiVersion", utils.APIVersion),
-		zap.String("buildVersion", utils.BuildVersion),
+		zap.String("appName", config.AppName),
+		zap.String("apiVersion", config.APIVersion),
+		zap.String("buildVersion", config.BuildVersion),
 		zap.String("hostname", hostname),
 	))
 

@@ -8,9 +8,9 @@ import (
 	"unsafe"
 
 	nsq "github.com/nsqio/go-nsq"
+	"github.com/swagchat/rtm-api/config"
 	"github.com/swagchat/rtm-api/logging"
 	"github.com/swagchat/rtm-api/rtm"
-	"github.com/swagchat/rtm-api/utils"
 	"go.uber.org/zap/zapcore"
 )
 
@@ -25,7 +25,7 @@ func b2s(b []byte) string {
 }
 
 func (np *nsqProvider) Subscribe() {
-	c := utils.Config()
+	c := config.Config()
 	if c.Messaging.NSQ.NsqlookupdHost != "" {
 		config := nsq.NewConfig()
 		channel := c.Messaging.NSQ.Channel
@@ -70,7 +70,7 @@ func (np *nsqProvider) Subscribe() {
 
 func (np *nsqProvider) Unsubscribe() {
 	if NSQConsumer != nil {
-		c := utils.Config()
+		c := config.Config()
 		hostname, err := os.Hostname()
 		_, err = http.Post("http://"+c.Messaging.NSQ.NsqdHost+":"+c.Messaging.NSQ.NsqdPort+"/channel/delete?topic="+c.Messaging.NSQ.Topic+"&channel="+hostname, "text/plain", nil)
 		if err != nil {

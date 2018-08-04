@@ -9,20 +9,20 @@ import (
 	"fmt"
 	"net/http"
 
+	"github.com/swagchat/rtm-api/config"
 	"github.com/swagchat/rtm-api/handlers"
 	"github.com/swagchat/rtm-api/messaging"
 	"github.com/swagchat/rtm-api/metrics"
 	"github.com/swagchat/rtm-api/rtm"
-	"github.com/swagchat/rtm-api/utils"
 )
 
 func main() {
-	if utils.IsShowVersion {
-		fmt.Printf("API Version %s\nBuild Version %s\n", utils.APIVersion, utils.BuildVersion)
+	if config.IsShowVersion {
+		fmt.Printf("API Version %s\nBuild Version %s\n", config.APIVersion, config.BuildVersion)
 		return
 	}
 
-	if utils.Config().Profiling {
+	if config.Config().Profiling {
 		go func() {
 			http.ListenAndServe("0.0.0.0:6060", nil)
 		}()

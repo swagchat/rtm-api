@@ -5,8 +5,8 @@ import (
 	"time"
 
 	"github.com/gorilla/websocket"
+	"github.com/swagchat/rtm-api/config"
 	"github.com/swagchat/rtm-api/logging"
-	"github.com/swagchat/rtm-api/utils"
 	"go.uber.org/zap/zapcore"
 )
 
@@ -44,7 +44,7 @@ func (c *Client) ReadPump() {
 	defer func() {
 		c.Conn.Close()
 	}()
-	c.Conn.SetReadLimit(utils.Config().MaxMessageSize)
+	c.Conn.SetReadLimit(config.Config().MaxMessageSize)
 	c.Conn.SetReadDeadline(time.Now().Add(pongWait))
 	c.Conn.SetPongHandler(func(string) error { c.Conn.SetReadDeadline(time.Now().Add(pongWait)); return nil })
 	for {
