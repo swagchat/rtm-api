@@ -46,8 +46,8 @@ type config struct {
 	Logging         *Logging
 	Logger          *Logger
 	Tracer          *Tracer
-	Messaging       *Messaging
 	Metrics         *Metrics
+	SBroker         *SBroker `yaml:"sBroker"`
 }
 
 // Logger is settings of logger
@@ -111,6 +111,27 @@ type Metrics struct {
 	}
 }
 
+type SBroker struct {
+	Provider string
+
+	Kafka struct {
+		Host    string
+		Port    string
+		GroupID string `yaml:"groupId"`
+		Topic   string
+	}
+
+	NSQ struct {
+		Port           string
+		NsqlookupdHost string `yaml:"nsqLookupdHost"`
+		NsqlookupdPort string `yaml:"nsqLookupdPort"`
+		NsqdHost       string `yaml:"nsqdHost"`
+		NsqdPort       string `yaml:"nsqdPort"`
+		Topic          string
+		Channel        string
+	}
+}
+
 func NewConfig() *config {
 	log.SetFlags(log.Llongfile)
 
@@ -141,8 +162,6 @@ func defaultSetting() *config {
 	logging := &Logging{
 		Level: "development",
 	}
-	messaging := &Messaging{}
-	metrics := &Metrics{}
 
 	c := &config{
 		Version:         "0",
@@ -159,9 +178,9 @@ func defaultSetting() *config {
 			ConsoleLevel:  "debug",
 			EnableFile:    false,
 		},
-		Tracer:    &Tracer{},
-		Messaging: messaging,
-		Metrics:   metrics,
+		Tracer:  &Tracer{},
+		Metrics: &Metrics{},
+		SBroker: &SBroker{},
 	}
 
 	return c
@@ -253,48 +272,6 @@ func (c *config) loadEnv() {
 		c.Tracer.Provider = v
 	}
 
-	// messaging
-	if v = os.Getenv("RTM_MESSAGING_PROVIDER"); v != "" {
-		c.Messaging.Provider = v
-	}
-
-	// messaging NSQ
-	if v = os.Getenv("RTM_MESSAGING_NSQ_PORT"); v != "" {
-		c.Messaging.NSQ.Port = v
-	}
-	if v = os.Getenv("RTM_MESSAGING_NSQ_NSQLOOKUPDHOST"); v != "" {
-		c.Messaging.NSQ.NsqlookupdHost = v
-	}
-	if v = os.Getenv("RTM_MESSAGING_NSQ_NSQLOOKUPDPORT"); v != "" {
-		c.Messaging.NSQ.NsqlookupdPort = v
-	}
-	if v = os.Getenv("RTM_MESSAGING_NSQ_NSQDHOST"); v != "" {
-		c.Messaging.NSQ.NsqdHost = v
-	}
-	if v = os.Getenv("RTM_MESSAGING_NSQ_NSQDPORT"); v != "" {
-		c.Messaging.NSQ.NsqdPort = v
-	}
-	if v = os.Getenv("RTM_MESSAGING_NSQ_TOPIC"); v != "" {
-		c.Messaging.NSQ.Topic = v
-	}
-	if v = os.Getenv("RTM_MESSAGING_NSQ_CHANNEL"); v != "" {
-		c.Messaging.NSQ.Channel = v
-	}
-
-	// messaging kafka
-	if v = os.Getenv("RTM_MESSAGING_KAFKA_HOST"); v != "" {
-		c.Messaging.Kafka.Host = v
-	}
-	if v = os.Getenv("RTM_MESSAGING_KAFKA_PORT"); v != "" {
-		c.Messaging.Kafka.Port = v
-	}
-	if v = os.Getenv("RTM_MESSAGING_KAFKA_GROUPID"); v != "" {
-		c.Messaging.Kafka.GroupID = v
-	}
-	if v = os.Getenv("RTM_MESSAGING_KAFKA_TOPIC"); v != "" {
-		c.Messaging.Kafka.Topic = v
-	}
-
 	// metrics
 	if v = os.Getenv("RTM_METRICS_PROVIDER"); v != "" {
 		c.Metrics.Provider = v
@@ -328,6 +305,48 @@ func (c *config) loadEnv() {
 	if v = os.Getenv("RTM_METRICS_ELASTICSEARCH_TYPE"); v != "" {
 		c.Metrics.Elasticsearch.Type = v
 	}
+
+	// SBroker
+	if v = os.Getenv("SWAG_SBROKER_PROVIDER"); v != "" {
+		c.SBroker.Provider = v
+	}
+
+	// SBroker - Kafka
+	if v = os.Getenv("SWAG_SBROKER_KAFKA_HOST"); v != "" {
+		c.SBroker.Kafka.Host = v
+	}
+	if v = os.Getenv("SWAG_SBROKER_KAFKA_PORT"); v != "" {
+		c.SBroker.Kafka.Port = v
+	}
+	if v = os.Getenv("SWAG_SBROKER_KAFKA_GROUPID"); v != "" {
+		c.SBroker.Kafka.GroupID = v
+	}
+	if v = os.Getenv("SWAG_SBROKER_KAFKA_TOPIC"); v != "" {
+		c.SBroker.Kafka.Topic = v
+	}
+
+	// SBroker - NSQ
+	if v = os.Getenv("SWAG_SBROKER_NSQ_PORT"); v != "" {
+		c.SBroker.NSQ.Port = v
+	}
+	if v = os.Getenv("SWAG_SBROKER_NSQ_NSQLOOKUPDHOST"); v != "" {
+		c.SBroker.NSQ.NsqlookupdHost = v
+	}
+	if v = os.Getenv("SWAG_SBROKER_NSQ_NSQLOOKUPDPORT"); v != "" {
+		c.SBroker.NSQ.NsqlookupdPort = v
+	}
+	if v = os.Getenv("SWAG_SBROKER_NSQ_NSQDHOST"); v != "" {
+		c.SBroker.NSQ.NsqdHost = v
+	}
+	if v = os.Getenv("SWAG_SBROKER_NSQ_NSQDPORT"); v != "" {
+		c.SBroker.NSQ.NsqdPort = v
+	}
+	if v = os.Getenv("SWAG_SBROKER_NSQ_TOPIC"); v != "" {
+		c.SBroker.NSQ.Topic = v
+	}
+	if v = os.Getenv("SWAG_SBROKER_NSQ_CHANNEL"); v != "" {
+		c.SBroker.NSQ.Channel = v
+	}
 }
 
 func (c *config) parseFlag() {
@@ -352,23 +371,6 @@ func (c *config) parseFlag() {
 	// Tracer
 	flag.StringVar(&c.Tracer.Provider, "tracer.provider", c.Tracer.Provider, "")
 
-	// messaging
-	flag.StringVar(&c.Messaging.Provider, "messaging.provider", c.Messaging.Provider, "")
-
-	// messaging NSQ
-	flag.StringVar(&c.Messaging.NSQ.NsqlookupdHost, "messaging.nsq.nsqlookupdHost", c.Messaging.NSQ.NsqlookupdHost, "Host name of nsqlookupd")
-	flag.StringVar(&c.Messaging.NSQ.NsqlookupdPort, "messaging.nsq.nsqlookupdPort", c.Messaging.NSQ.NsqlookupdPort, "Port no of nsqlookupd")
-	flag.StringVar(&c.Messaging.NSQ.NsqdHost, "messaging.nsq.nsqdHost", c.Messaging.NSQ.NsqdHost, "Host name of nsqd")
-	flag.StringVar(&c.Messaging.NSQ.NsqdPort, "messaging.nsq.nsqdPort", c.Messaging.NSQ.NsqdPort, "Port no of nsqd")
-	flag.StringVar(&c.Messaging.NSQ.Topic, "messaging.nsq.topic", c.Messaging.NSQ.Topic, "Topic name")
-	flag.StringVar(&c.Messaging.NSQ.Channel, "messaging.nsq.channel", c.Messaging.NSQ.Channel, "Channel name. If it's not set, channel is hostname.")
-
-	// messaging kafka
-	flag.StringVar(&c.Messaging.Kafka.Host, "messaging.kafka.host", c.Messaging.Kafka.Host, "")
-	flag.StringVar(&c.Messaging.Kafka.Port, "messaging.kafka.port", c.Messaging.Kafka.Port, "")
-	flag.StringVar(&c.Messaging.Kafka.GroupID, "messaging.kafka.groupId", c.Messaging.Kafka.GroupID, "")
-	flag.StringVar(&c.Messaging.Kafka.Topic, "messaging.kafka.topic", c.Messaging.Kafka.Topic, "")
-
 	// metrics
 	flag.StringVar(&c.Metrics.Provider, "metrics.provider", c.Metrics.Provider, "")
 	flag.IntVar(&c.Metrics.Interval, "metrics.interval", c.Metrics.Interval, "")
@@ -381,6 +383,23 @@ func (c *config) parseFlag() {
 	flag.StringVar(&c.Metrics.Elasticsearch.Index, "metrics.elasticsearch.index", c.Metrics.Elasticsearch.Index, "")
 	flag.StringVar(&c.Metrics.Elasticsearch.IndexTimeFormat, "metrics.elasticsearch.indexTimeFormat", c.Metrics.Elasticsearch.IndexTimeFormat, "")
 	flag.StringVar(&c.Metrics.Elasticsearch.Type, "metrics.elasticsearch.type", c.Metrics.Elasticsearch.Type, "")
+
+	// SBroker
+	flag.StringVar(&c.SBroker.Provider, "sbroker.provider", c.SBroker.Provider, "")
+
+	// SBroker - kafka
+	flag.StringVar(&c.SBroker.Kafka.Host, "sbroker.kafka.host", c.SBroker.Kafka.Host, "")
+	flag.StringVar(&c.SBroker.Kafka.Port, "sbroker.kafka.port", c.SBroker.Kafka.Port, "")
+	flag.StringVar(&c.SBroker.Kafka.GroupID, "sbroker.kafka.groupId", c.SBroker.Kafka.GroupID, "")
+	flag.StringVar(&c.SBroker.Kafka.Topic, "sbroker.kafka.topic", c.SBroker.Kafka.Topic, "")
+
+	// SBroker - NSQ
+	flag.StringVar(&c.SBroker.NSQ.NsqlookupdHost, "sbroker.nsq.nsqlookupdHost", c.SBroker.NSQ.NsqlookupdHost, "Host name of nsqlookupd")
+	flag.StringVar(&c.SBroker.NSQ.NsqlookupdPort, "sbroker.nsq.nsqlookupdPort", c.SBroker.NSQ.NsqlookupdPort, "Port no of nsqlookupd")
+	flag.StringVar(&c.SBroker.NSQ.NsqdHost, "sbroker.nsq.nsqdHost", c.SBroker.NSQ.NsqdHost, "Host name of nsqd")
+	flag.StringVar(&c.SBroker.NSQ.NsqdPort, "sbroker.nsq.nsqdPort", c.SBroker.NSQ.NsqdPort, "Port no of nsqd")
+	flag.StringVar(&c.SBroker.NSQ.Topic, "sbroker.nsq.topic", c.SBroker.NSQ.Topic, "Topic name")
+	flag.StringVar(&c.SBroker.NSQ.Channel, "sbroker.nsq.channel", c.SBroker.NSQ.Channel, "Channel name. If it's not set, channel is hostname.")
 
 	flag.Parse()
 }
