@@ -90,7 +90,7 @@ func indexHandler(w http.ResponseWriter, r *http.Request) {
 
 func traceHandler(fn http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		ctx := tracer.Provider(r.Context()).StartTransaction(
+		ctx, span := tracer.Provider(r.Context()).StartTransaction(
 			fmt.Sprintf("%s:%s", r.Method, r.RequestURI), "REST",
 			tracer.StartTransactionOptionWithHTTPRequest(r),
 		)
@@ -99,10 +99,10 @@ func traceHandler(fn http.HandlerFunc) http.HandlerFunc {
 		sw := &customResponseWriter{ResponseWriter: w}
 		fn(sw, r.WithContext(ctx))
 
-		tracer.Provider(ctx).SetHTTPStatusCode(sw.status)
-		tracer.Provider(ctx).SetTag("http.method", r.Method)
-		tracer.Provider(ctx).SetTag("http.content_length", sw.length)
-		tracer.Provider(ctx).SetTag("http.referer", r.Referer())
+		tracer.Provider(ctx).SetHTTPStatusCode(span, sw.status)
+		tracer.Provider(ctx).SetTag(span, "http.method", r.Method)
+		tracer.Provider(ctx).SetTag(span, "http.content_length", sw.length)
+		tracer.Provider(ctx).SetTag(span, "http.referer", r.Referer())
 	}
 }
 
@@ -125,6 +125,7 @@ func websocketHandler(w http.ResponseWriter, r *http.Request) {
 
 	conn, err := upgrader.Upgrade(w, r, nil)
 	if err != nil {
+		tracer.Provider(ctx).SetError(span, err)
 		logger.Error(err.Error())
 		return
 	}
