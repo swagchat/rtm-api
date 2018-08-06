@@ -15,11 +15,9 @@ import (
 	"github.com/shogo82148/go-gracedown"
 	"github.com/swagchat/rtm-api/config"
 	"github.com/swagchat/rtm-api/logger"
-	"github.com/swagchat/rtm-api/logging"
 	"github.com/swagchat/rtm-api/rtm"
 	"github.com/swagchat/rtm-api/tracer"
 	"github.com/swagchat/rtm-api/utils"
-	"go.uber.org/zap/zapcore"
 )
 
 var (
@@ -115,10 +113,7 @@ func messageHandler(w http.ResponseWriter, r *http.Request) {
 
 	message, err := ioutil.ReadAll(r.Body)
 	if err != nil {
-		logging.Log(zapcore.ErrorLevel, &logging.AppLog{
-			Kind:    "handler",
-			Message: err.Error(),
-		})
+		logger.Error(err.Error())
 	}
 	rtm.Server().Broadcast <- message
 }
@@ -130,10 +125,7 @@ func websocketHandler(w http.ResponseWriter, r *http.Request) {
 
 	conn, err := upgrader.Upgrade(w, r, nil)
 	if err != nil {
-		logging.Log(zapcore.ErrorLevel, &logging.AppLog{
-			Kind:    "handler",
-			Message: err.Error(),
-		})
+		logger.Error(err.Error())
 		return
 	}
 
@@ -158,10 +150,7 @@ func websocketHandler(w http.ResponseWriter, r *http.Request) {
 func speechHandler(w http.ResponseWriter, r *http.Request) {
 	conn, err := speechUpgrader.Upgrade(w, r, nil)
 	if err != nil {
-		logging.Log(zapcore.ErrorLevel, &logging.AppLog{
-			Kind:    "handler",
-			Message: err.Error(),
-		})
+		logger.Error(err.Error())
 		return
 	}
 

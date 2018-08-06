@@ -3,8 +3,7 @@ package rtm
 import (
 	"fmt"
 
-	"github.com/swagchat/rtm-api/logging"
-	"go.uber.org/zap/zapcore"
+	"github.com/swagchat/rtm-api/logger"
 )
 
 type Connection struct {
@@ -26,14 +25,7 @@ func (con *Connection) AddClient(c *Client) {
 		return
 	}
 
-	logging.Log(zapcore.InfoLevel, &logging.AppLog{
-		Kind:      "add-client",
-		UserID:    c.UserId,
-		Client:    fmt.Sprintf("%p", c.Conn),
-		Useragent: c.Useragent,
-		IPAddress: c.IPAddress,
-	})
-
+	logger.Info(fmt.Sprintf("add-client userId[%s] ip[%s]", c.UserId, c.IPAddress))
 	con.clients[c] = true
 
 	var userClients *UserClients
@@ -53,12 +45,7 @@ func (con *Connection) RemoveClient(c *Client) {
 		return
 	}
 
-	logging.Log(zapcore.InfoLevel, &logging.AppLog{
-		Kind:   "delete-client",
-		UserID: c.UserId,
-		Client: fmt.Sprintf("%p", c.Conn),
-	})
-
+	logger.Info(fmt.Sprintf("add-client userId[%s] ip[%s]", c.UserId, c.IPAddress))
 	delete(con.clients, c)
 
 	for client := range con.users[c.UserId].clients {

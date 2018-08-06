@@ -6,8 +6,7 @@ import (
 
 	"github.com/gorilla/websocket"
 	"github.com/swagchat/rtm-api/config"
-	"github.com/swagchat/rtm-api/logging"
-	"go.uber.org/zap/zapcore"
+	"github.com/swagchat/rtm-api/logger"
 )
 
 const (
@@ -55,10 +54,7 @@ func (c *Client) ReadPump() {
 		if err != nil {
 			pos := strings.LastIndex(err.Error(), "normal")
 			if pos == 0 {
-				logging.Log(zapcore.ErrorLevel, &logging.AppLog{
-					Kind:    "websocket",
-					Message: err.Error(),
-				})
+				logger.Error(err.Error())
 			}
 
 			if websocket.IsUnexpectedCloseError(err, websocket.CloseGoingAway) {
@@ -100,10 +96,7 @@ func (c *Client) WritePump() {
 			c.Conn.SetWriteDeadline(time.Now().Add(writeWait))
 			w, err := c.Conn.NextWriter(websocket.TextMessage)
 			if err != nil {
-				logging.Log(zapcore.ErrorLevel, &logging.AppLog{
-					Kind:    "websocket",
-					Message: err.Error(),
-				})
+				logger.Error(err.Error())
 				return
 			}
 			w.Write(message)
@@ -114,19 +107,15 @@ func (c *Client) WritePump() {
 				w.Write(<-c.Send)
 			}
 
-			if err := w.Close(); err != nil {
-				logging.Log(zapcore.ErrorLevel, &logging.AppLog{
-					Kind:    "websocket",
-					Message: err.Error(),
-				})
+			err = w.Close()
+			if err != nil {
+				logger.Error(err.Error())
 				return
 			}
 		case <-ticker.C:
-			if err := c.write(websocket.PingMessage, []byte{}); err != nil {
-				logging.Log(zapcore.ErrorLevel, &logging.AppLog{
-					Kind:    "websocket",
-					Message: err.Error(),
-				})
+			err := c.write(websocket.PingMessage, []byte{})
+			if err != nil {
+				logger.Error(err.Error())
 				return
 			}
 		}

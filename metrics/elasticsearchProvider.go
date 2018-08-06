@@ -7,8 +7,7 @@ import (
 
 	"github.com/olivere/elastic"
 	"github.com/swagchat/rtm-api/config"
-	"github.com/swagchat/rtm-api/logging"
-	"go.uber.org/zap/zapcore"
+	"github.com/swagchat/rtm-api/logger"
 )
 
 type elasticsearchProvider struct{}
@@ -17,11 +16,7 @@ func (ep *elasticsearchProvider) Run() {
 	c := config.Config()
 	client, err := elastic.NewClient(elastic.SetURL(c.Metrics.Elasticsearch.URL))
 	if err != nil {
-		logging.Log(zapcore.ErrorLevel, &logging.AppLog{
-			Kind:     "metrics",
-			Provider: "elasticsearch",
-			Message:  fmt.Sprintf("%s endpoint[%s]", err.Error(), c.Metrics.Elasticsearch.URL),
-		})
+		logger.Error(err.Error())
 	}
 
 	exec(func() {
@@ -34,11 +29,7 @@ func (ep *elasticsearchProvider) Run() {
 			BodyJson(m).
 			Do(context.Background())
 		if err != nil {
-			logging.Log(zapcore.ErrorLevel, &logging.AppLog{
-				Kind:     "metrics",
-				Provider: "elasticsearch",
-				Message:  fmt.Sprintf("%s endpoint[%s] index[%s] indexTimeFormat[%s]", err.Error(), c.Metrics.Elasticsearch.URL, c.Metrics.Elasticsearch.Index, c.Metrics.Elasticsearch.IndexTimeFormat),
-			})
+			logger.Error(err.Error())
 		}
 	}, c.Metrics.Interval)
 }

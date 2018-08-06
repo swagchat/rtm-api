@@ -5,8 +5,7 @@ import (
 	"fmt"
 
 	scpb "github.com/swagchat/protobuf/protoc-gen-go"
-	"github.com/swagchat/rtm-api/logging"
-	"go.uber.org/zap/zapcore"
+	"github.com/swagchat/rtm-api/logger"
 )
 
 var srv *server = NewServer()
@@ -44,44 +43,23 @@ func (s *server) Run() {
 	for {
 		select {
 		case rcvData := <-s.Register:
-			// Register event
-			logging.Log(zapcore.InfoLevel, &logging.AppLog{
-				Kind:   "register",
-				UserID: rcvData.UserId,
-				RoomID: rcvData.RoomId,
-				Event:  rcvData.EventName,
-				Client: fmt.Sprintf("%p", rcvData.Client.Conn),
-			})
+			logger.Info(fmt.Sprintf("Register event userId[%s] roomId[%s] eventName[%s] client[%p]", rcvData.UserId, rcvData.RoomId, rcvData.EventName, rcvData.Client.Conn))
+			s.Connection.RemoveEvent(rcvData.UserId, rcvData.EventName, rcvData.Client)
 
 			s.Connection.clients[rcvData.Client] = true
 			s.Connection.AddEvent(rcvData.UserId, rcvData.EventName, rcvData.Client)
 
 		case rcvData := <-s.Unregister:
-			// Unregister event
-			logging.Log(zapcore.InfoLevel, &logging.AppLog{
-				Kind:   "unregister",
-				UserID: rcvData.UserId,
-				RoomID: rcvData.RoomId,
-				Event:  rcvData.EventName,
-				Client: fmt.Sprintf("%p", rcvData.Client.Conn),
-			})
+			logger.Info(fmt.Sprintf("Unregister event userId[%s] roomId[%s] eventName[%s] client[%p]", rcvData.UserId, rcvData.RoomId, rcvData.EventName, rcvData.Client.Conn))
 			s.Connection.RemoveEvent(rcvData.UserId, rcvData.EventName, rcvData.Client)
 
 		case c := <-s.Close:
-			// Socket close
-			logging.Log(zapcore.InfoLevel, &logging.AppLog{
-				Kind:   "socket-close",
-				Client: fmt.Sprintf("%p", c.Conn),
-			})
+			logger.Info("Closing socket")
 			s.Connection.RemoveClient(c)
 			close(c.Send)
 
 		case message := <-s.Broadcast:
-			// Broadcast message
-			logging.Log(zapcore.InfoLevel, &logging.AppLog{
-				Kind:    "bloadcast",
-				Message: string(message),
-			})
+			logger.Info("Broadcasting message")
 			s.broadcast(message)
 		}
 	}
