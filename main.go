@@ -9,14 +9,17 @@ import (
 	"fmt"
 	"net/http"
 	"os"
+	"os/signal"
+	"syscall"
 
 	"github.com/kylelemons/godebug/pretty"
 	"github.com/swagchat/rtm-api/config"
-	"github.com/swagchat/rtm-api/handlers"
 	"github.com/swagchat/rtm-api/logger"
 	"github.com/swagchat/rtm-api/messaging"
 	"github.com/swagchat/rtm-api/metrics"
+	"github.com/swagchat/rtm-api/rest"
 	"github.com/swagchat/rtm-api/rtm"
+	"github.com/swagchat/rtm-api/tracer"
 )
 
 func main() {
@@ -42,9 +45,23 @@ func main() {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
+	err := tracer.Provider(ctx).NewTracer()
+	if err != nil {
+		logger.Error(err.Error())
+		os.Exit(1)
+	}
+	defer tracer.Provider(ctx).Close()
+
+	sigChan := make(chan os.Signal)
+	signal.Notify(sigChan, syscall.SIGTERM, syscall.SIGINT, syscall.SIGQUIT, syscall.SIGTSTP, syscall.SIGKILL, syscall.SIGSTOP)
+	go func() {
+		<-sigChan
+		cancel()
+	}()
+
 	go metrics.Provider().Run()
 	go messaging.Provider().Subscribe()
 	go rtm.Server().Run()
 
-	handlers.StartServer(ctx)
+	rest.Run(ctx)
 }

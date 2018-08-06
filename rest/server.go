@@ -1,4 +1,4 @@
-package handlers
+package rest
 
 import (
 	"context"
@@ -7,18 +7,17 @@ import (
 	"io/ioutil"
 	"net/http"
 	"net/url"
-	"os"
-	"os/signal"
 	"strings"
-	"syscall"
 
 	"github.com/fukata/golang-stats-api-handler"
 	"github.com/go-zoo/bone"
 	"github.com/gorilla/websocket"
 	"github.com/shogo82148/go-gracedown"
 	"github.com/swagchat/rtm-api/config"
+	"github.com/swagchat/rtm-api/logger"
 	"github.com/swagchat/rtm-api/logging"
 	"github.com/swagchat/rtm-api/rtm"
+	"github.com/swagchat/rtm-api/tracer"
 	"github.com/swagchat/rtm-api/utils"
 	"go.uber.org/zap/zapcore"
 )
@@ -39,56 +38,81 @@ var (
 	}
 )
 
-// StartServer is HTTP Server
-func StartServer(ctx context.Context) {
+// Run runs start REST API server
+func Run(ctx context.Context) {
+	cfg := config.Config()
+
 	mux := bone.New()
 	mux.GetFunc("/", indexHandler)
 	mux.GetFunc("/stats", stats_api.Handler)
-	mux.GetFunc("/ws", websocketHandler)
+	mux.GetFunc("/ws", traceHandler(websocketHandler))
 	mux.GetFunc("/speech", speechHandler)
-	mux.PostFunc("/message", messageHandler)
+	mux.PostFunc("/message", traceHandler(messageHandler))
 	mux.OptionsFunc("/*", optionsHandler)
 	mux.NotFoundFunc(notFoundHandler)
 
-	signalChan := make(chan os.Signal)
-	signal.Notify(signalChan, syscall.SIGTERM, syscall.SIGINT)
+	logger.Info(fmt.Sprintf("Starting %s server[REST] on listen tcp :%s", config.AppName, cfg.HTTPPort))
+	errCh := make(chan error)
+	go func() {
+		errCh <- gracedown.ListenAndServe(fmt.Sprintf(":%s", cfg.HTTPPort), mux)
+	}()
 
-	go run(ctx)
-
-	c := config.Config()
-
-	gracedown.ListenAndServe(fmt.Sprintf(":%s", c.HTTPPort), mux)
-
-	logging.Log(zapcore.InfoLevel, &logging.AppLog{
-		Kind:    "handler",
-		Message: "shut down complete",
-	})
+	select {
+	case <-ctx.Done():
+		logger.Info(fmt.Sprintf("Stopping %s server[REST]", config.AppName))
+		gracedown.Close()
+	case err := <-errCh:
+		logger.Error(fmt.Sprintf("Failed to serve %s server[REST]. %v", config.AppName, err))
+	}
 }
 
-func run(ctx context.Context) {
-	signalChan := make(chan os.Signal)
-	signal.Notify(signalChan, syscall.SIGTERM, syscall.SIGINT)
-	for {
-		select {
-		case <-ctx.Done():
-			gracedown.Close()
-		case s := <-signalChan:
-			if s == syscall.SIGTERM || s == syscall.SIGINT {
-				logging.Log(zapcore.InfoLevel, &logging.AppLog{
-					Kind:    "handler",
-					Message: fmt.Sprintf("%s graceful down by signal[%s]", config.AppName, s.String()),
-				})
-				gracedown.Close()
-			}
-		}
+type customResponseWriter struct {
+	http.ResponseWriter
+	status int
+	length int
+}
+
+func (w *customResponseWriter) WriteHeader(status int) {
+	w.status = status
+	w.ResponseWriter.WriteHeader(status)
+}
+
+func (w *customResponseWriter) Write(b []byte) (int, error) {
+	if w.status == 0 {
+		w.status = 200
 	}
+	n, err := w.ResponseWriter.Write(b)
+	w.length += n
+	return n, err
 }
 
 func indexHandler(w http.ResponseWriter, r *http.Request) {
 	respond(w, r, http.StatusOK, "text/plain", fmt.Sprintf("%s [API Version]%s [Build Version]%s", config.AppName, config.APIVersion, config.BuildVersion))
 }
 
+func traceHandler(fn http.HandlerFunc) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		ctx := tracer.Provider(r.Context()).StartTransaction(
+			fmt.Sprintf("%s:%s", r.Method, r.RequestURI), "REST",
+			tracer.StartTransactionOptionWithHTTPRequest(r),
+		)
+		defer tracer.Provider(ctx).CloseTransaction()
+
+		sw := &customResponseWriter{ResponseWriter: w}
+		fn(sw, r.WithContext(ctx))
+
+		tracer.Provider(ctx).SetHTTPStatusCode(sw.status)
+		tracer.Provider(ctx).SetTag("http.method", r.Method)
+		tracer.Provider(ctx).SetTag("http.content_length", sw.length)
+		tracer.Provider(ctx).SetTag("http.referer", r.Referer())
+	}
+}
+
 func messageHandler(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	span := tracer.Provider(ctx).StartSpan("messageHandler", "rest")
+	defer tracer.Provider(ctx).Finish(span)
+
 	message, err := ioutil.ReadAll(r.Body)
 	if err != nil {
 		logging.Log(zapcore.ErrorLevel, &logging.AppLog{

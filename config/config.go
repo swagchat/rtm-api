@@ -20,7 +20,7 @@ const (
 	// BuildVersion is API build version
 	BuildVersion = "0.3.0"
 
-	CtxSubscription
+	CtxSubscription ctxKey = iota
 	CtxTracerTransaction
 	CtxTracerSpan
 )
@@ -32,6 +32,8 @@ var (
 	// StopRun is a flag for stop run server
 	StopRun = false
 )
+
+type ctxKey int
 
 type config struct {
 	Version         string
