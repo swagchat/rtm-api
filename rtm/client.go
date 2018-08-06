@@ -39,14 +39,16 @@ type RcvData struct {
 	Client    *Client
 }
 
-// Client -> Server
+// ReadPump (Client -> Server)
 func (c *Client) ReadPump() {
 	defer func() {
 		c.Conn.Close()
 	}()
+
 	c.Conn.SetReadLimit(config.Config().MaxMessageSize)
 	c.Conn.SetReadDeadline(time.Now().Add(pongWait))
 	c.Conn.SetPongHandler(func(string) error { c.Conn.SetReadDeadline(time.Now().Add(pongWait)); return nil })
+
 	for {
 		rcvData := &RcvData{}
 		err := c.Conn.ReadJSON(&rcvData)
@@ -79,13 +81,14 @@ func (c *Client) ReadPump() {
 	}
 }
 
-// Server -> Client
+// WritePump (Server -> Client)
 func (c *Client) WritePump() {
 	ticker := time.NewTicker(pingPeriod)
 	defer func() {
 		ticker.Stop()
 		c.Conn.Close()
 	}()
+
 	for {
 		select {
 		case message, ok := <-c.Send:

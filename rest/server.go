@@ -46,7 +46,7 @@ func Run(ctx context.Context) {
 	mux.GetFunc("/", indexHandler)
 	mux.GetFunc("/stats", stats_api.Handler)
 	mux.GetFunc("/ws", traceHandler(websocketHandler))
-	mux.GetFunc("/speech", speechHandler)
+	mux.GetFunc("/speech", traceHandler(speechHandler))
 	mux.PostFunc("/message", traceHandler(messageHandler))
 	mux.OptionsFunc("/*", optionsHandler)
 	mux.NotFoundFunc(notFoundHandler)
@@ -124,6 +124,10 @@ func messageHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func websocketHandler(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	span := tracer.Provider(ctx).StartSpan("websocketHandler", "rest")
+	defer tracer.Provider(ctx).Finish(span)
+
 	conn, err := upgrader.Upgrade(w, r, nil)
 	if err != nil {
 		logging.Log(zapcore.ErrorLevel, &logging.AppLog{
