@@ -31,4 +31,4 @@ COPY --from=build /usr/local/include/librdkafka /usr/local/include/librdkafka
 STOPSIGNAL SIGTERM
 
 EXPOSE 8102
-CMD /bin/sh -c "cd /app && ./rtm-api"
+ENTRYPOINT ["/app/rtm-api"]
