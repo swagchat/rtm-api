@@ -138,10 +138,12 @@ func NewConfig() *config {
 	c := defaultSetting()
 	c.loadEnv()
 
-	c.loadYaml()
-	c.parseFlag()
+	err := c.parseFlag(os.Args[1:])
+	if err != nil {
+		log.Fatalf("Failed to load setting. %v", err)
+	}
 
-	err := c.validate()
+	err = c.validate()
 	if err != nil {
 		log.Fatalf("Invalid setting. %v", err)
 	}
@@ -186,8 +188,7 @@ func defaultSetting() *config {
 	return c
 }
 
-func (c *config) loadYaml() {
-	buf, _ := ioutil.ReadFile("config/app.yaml")
+func (c *config) loadYaml(buf []byte) {
 	yaml.Unmarshal(buf, c)
 }
 
@@ -229,20 +230,6 @@ func (c *config) loadEnv() {
 		size, _ := strconv.ParseInt(v, 10, 64)
 		c.MaxMessageSize = size
 	}
-
-	// Logging
-	if v = os.Getenv("RTM_LOGGING_LEVEL"); v != "" {
-		c.Logging.Level = v
-	}
-
-	// Logging
-	flag.BoolVar(&c.Logger.EnableConsole, "logger.enableConsole", c.Logger.EnableConsole, "")
-	flag.StringVar(&c.Logger.ConsoleFormat, "logger.consoleFormat", c.Logger.ConsoleFormat, "")
-	flag.StringVar(&c.Logger.ConsoleLevel, "logger.consoleLevel", c.Logger.ConsoleLevel, "")
-	flag.BoolVar(&c.Logger.EnableFile, "logger.enableFile", c.Logger.EnableFile, "")
-	flag.StringVar(&c.Logger.FileFormat, "logger.fileFormat", c.Logger.FileFormat, "")
-	flag.StringVar(&c.Logger.FileLevel, "logger.fileLevel", c.Logger.FileLevel, "")
-	flag.StringVar(&c.Logger.FilePath, "logger.filePath", c.Logger.FilePath, "")
 
 	// Logger
 	if v = os.Getenv("SWAG_LOGGER_ENABLE_CONSOLE"); v == "true" {
@@ -349,59 +336,112 @@ func (c *config) loadEnv() {
 	}
 }
 
-func (c *config) parseFlag() {
-	flag.BoolVar(&showVersion, "v", false, "")
-	flag.BoolVar(&showVersion, "version", false, "show version")
+func (c *config) parseFlag(args []string) error {
+	if len(args) == 0 {
+		return nil
+	}
 
-	flag.StringVar(&c.HTTPPort, "httpPort", c.HTTPPort, "")
+	flags := flag.NewFlagSet(fmt.Sprintf("%s Flags", AppName), flag.ContinueOnError)
+
+	flags.BoolVar(&showVersion, "v", false, "")
+	flags.BoolVar(&showVersion, "version", false, "show version")
+
+	flags.StringVar(&c.HTTPPort, "httpPort", c.HTTPPort, "")
 
 	var profiling string
-	flag.StringVar(&profiling, "profiling", "", "")
+	flags.StringVar(&profiling, "profiling", "", "")
 
 	var errorLogging string
-	flag.StringVar(&errorLogging, "errorLogging", "", "false")
+	flags.StringVar(&errorLogging, "errorLogging", "", "false")
 
 	flag.IntVar(&c.ReadBufferSize, "readBufferSize", c.ReadBufferSize, "")
 	flag.IntVar(&c.WriteBufferSize, "writeBufferSize", c.WriteBufferSize, "")
 	flag.Int64Var(&c.MaxMessageSize, "maxMessageSize", c.MaxMessageSize, "")
 
 	// Logging
-	flag.StringVar(&c.Logging.Level, "logging.level", c.Logging.Level, "")
+	flags.BoolVar(&c.Logger.EnableConsole, "logger.enableConsole", c.Logger.EnableConsole, "")
+	flags.StringVar(&c.Logger.ConsoleFormat, "logger.consoleFormat", c.Logger.ConsoleFormat, "")
+	flags.StringVar(&c.Logger.ConsoleLevel, "logger.consoleLevel", c.Logger.ConsoleLevel, "")
+	flags.BoolVar(&c.Logger.EnableFile, "logger.enableFile", c.Logger.EnableFile, "")
+	flags.StringVar(&c.Logger.FileFormat, "logger.fileFormat", c.Logger.FileFormat, "")
+	flags.StringVar(&c.Logger.FileLevel, "logger.fileLevel", c.Logger.FileLevel, "")
+	flags.StringVar(&c.Logger.FilePath, "logger.filePath", c.Logger.FilePath, "")
 
 	// Tracer
-	flag.StringVar(&c.Tracer.Provider, "tracer.provider", c.Tracer.Provider, "")
+	flags.StringVar(&c.Tracer.Provider, "tracer.provider", c.Tracer.Provider, "")
 
 	// metrics
-	flag.StringVar(&c.Metrics.Provider, "metrics.provider", c.Metrics.Provider, "")
+	flags.StringVar(&c.Metrics.Provider, "metrics.provider", c.Metrics.Provider, "")
 	flag.IntVar(&c.Metrics.Interval, "metrics.interval", c.Metrics.Interval, "")
-	flag.BoolVar(&c.Metrics.Verbose, "metrics.verbose", c.Metrics.Verbose, "")
+	flags.BoolVar(&c.Metrics.Verbose, "metrics.verbose", c.Metrics.Verbose, "")
 
 	// metrics elasticsearch
-	flag.StringVar(&c.Metrics.Elasticsearch.URL, "metrics.elasticsearch.url", c.Metrics.Elasticsearch.URL, "")
-	flag.StringVar(&c.Metrics.Elasticsearch.UserID, "metrics.elasticsearch.userId", c.Metrics.Elasticsearch.UserID, "")
-	flag.StringVar(&c.Metrics.Elasticsearch.Password, "metrics.elasticsearch.password", c.Metrics.Elasticsearch.Password, "")
-	flag.StringVar(&c.Metrics.Elasticsearch.Index, "metrics.elasticsearch.index", c.Metrics.Elasticsearch.Index, "")
-	flag.StringVar(&c.Metrics.Elasticsearch.IndexTimeFormat, "metrics.elasticsearch.indexTimeFormat", c.Metrics.Elasticsearch.IndexTimeFormat, "")
-	flag.StringVar(&c.Metrics.Elasticsearch.Type, "metrics.elasticsearch.type", c.Metrics.Elasticsearch.Type, "")
+	flags.StringVar(&c.Metrics.Elasticsearch.URL, "metrics.elasticsearch.url", c.Metrics.Elasticsearch.URL, "")
+	flags.StringVar(&c.Metrics.Elasticsearch.UserID, "metrics.elasticsearch.userId", c.Metrics.Elasticsearch.UserID, "")
+	flags.StringVar(&c.Metrics.Elasticsearch.Password, "metrics.elasticsearch.password", c.Metrics.Elasticsearch.Password, "")
+	flags.StringVar(&c.Metrics.Elasticsearch.Index, "metrics.elasticsearch.index", c.Metrics.Elasticsearch.Index, "")
+	flags.StringVar(&c.Metrics.Elasticsearch.IndexTimeFormat, "metrics.elasticsearch.indexTimeFormat", c.Metrics.Elasticsearch.IndexTimeFormat, "")
+	flags.StringVar(&c.Metrics.Elasticsearch.Type, "metrics.elasticsearch.type", c.Metrics.Elasticsearch.Type, "")
 
 	// SBroker
-	flag.StringVar(&c.SBroker.Provider, "sbroker.provider", c.SBroker.Provider, "")
+	flags.StringVar(&c.SBroker.Provider, "sbroker.provider", c.SBroker.Provider, "")
 
 	// SBroker - kafka
-	flag.StringVar(&c.SBroker.Kafka.Host, "sbroker.kafka.host", c.SBroker.Kafka.Host, "")
-	flag.StringVar(&c.SBroker.Kafka.Port, "sbroker.kafka.port", c.SBroker.Kafka.Port, "")
-	flag.StringVar(&c.SBroker.Kafka.GroupID, "sbroker.kafka.groupId", c.SBroker.Kafka.GroupID, "")
-	flag.StringVar(&c.SBroker.Kafka.Topic, "sbroker.kafka.topic", c.SBroker.Kafka.Topic, "")
+	flags.StringVar(&c.SBroker.Kafka.Host, "sbroker.kafka.host", c.SBroker.Kafka.Host, "")
+	flags.StringVar(&c.SBroker.Kafka.Port, "sbroker.kafka.port", c.SBroker.Kafka.Port, "")
+	flags.StringVar(&c.SBroker.Kafka.GroupID, "sbroker.kafka.groupId", c.SBroker.Kafka.GroupID, "")
+	flags.StringVar(&c.SBroker.Kafka.Topic, "sbroker.kafka.topic", c.SBroker.Kafka.Topic, "")
 
 	// SBroker - NSQ
-	flag.StringVar(&c.SBroker.NSQ.NsqlookupdHost, "sbroker.nsq.nsqlookupdHost", c.SBroker.NSQ.NsqlookupdHost, "Host name of nsqlookupd")
-	flag.StringVar(&c.SBroker.NSQ.NsqlookupdPort, "sbroker.nsq.nsqlookupdPort", c.SBroker.NSQ.NsqlookupdPort, "Port no of nsqlookupd")
-	flag.StringVar(&c.SBroker.NSQ.NsqdHost, "sbroker.nsq.nsqdHost", c.SBroker.NSQ.NsqdHost, "Host name of nsqd")
-	flag.StringVar(&c.SBroker.NSQ.NsqdPort, "sbroker.nsq.nsqdPort", c.SBroker.NSQ.NsqdPort, "Port no of nsqd")
-	flag.StringVar(&c.SBroker.NSQ.Topic, "sbroker.nsq.topic", c.SBroker.NSQ.Topic, "Topic name")
-	flag.StringVar(&c.SBroker.NSQ.Channel, "sbroker.nsq.channel", c.SBroker.NSQ.Channel, "Channel name. If it's not set, channel is hostname.")
+	flags.StringVar(&c.SBroker.NSQ.NsqlookupdHost, "sbroker.nsq.nsqlookupdHost", c.SBroker.NSQ.NsqlookupdHost, "Host name of nsqlookupd")
+	flags.StringVar(&c.SBroker.NSQ.NsqlookupdPort, "sbroker.nsq.nsqlookupdPort", c.SBroker.NSQ.NsqlookupdPort, "Port no of nsqlookupd")
+	flags.StringVar(&c.SBroker.NSQ.NsqdHost, "sbroker.nsq.nsqdHost", c.SBroker.NSQ.NsqdHost, "Host name of nsqd")
+	flags.StringVar(&c.SBroker.NSQ.NsqdPort, "sbroker.nsq.nsqdPort", c.SBroker.NSQ.NsqdPort, "Port no of nsqd")
+	flags.StringVar(&c.SBroker.NSQ.Topic, "sbroker.nsq.topic", c.SBroker.NSQ.Topic, "Topic name")
+	flags.StringVar(&c.SBroker.NSQ.Channel, "sbroker.nsq.channel", c.SBroker.NSQ.Channel, "Channel name. If it's not set, channel is hostname.")
 
-	flag.Parse()
+	configPath := ""
+	flags.StringVar(&configPath, "config", "", "config file(yaml format)")
+
+	if flag.Lookup("test.run") != nil { // for testing
+		return nil
+	}
+
+	err := flags.Parse(args)
+	if err != nil {
+		return nil
+	}
+
+	if showHelp {
+		flags.PrintDefaults()
+		StopRun = true
+		return nil
+	}
+
+	if showVersion {
+		fmt.Printf("API Version %s\nBuild Version %s\n", APIVersion, BuildVersion)
+		StopRun = true
+		return nil
+	}
+
+	if configPath != "" {
+		if !isExists(configPath) {
+			return fmt.Errorf("File not found [%s]", configPath)
+		}
+		buf, _ := ioutil.ReadFile(configPath)
+		c.loadYaml(buf)
+	}
+
+	if profiling == "true" {
+		c.Profiling = true
+	}
+
+	return nil
+}
+
+func isExists(name string) bool {
+	_, err := os.Stat(name)
+	return !os.IsNotExist(err)
 }
 
 func (c *config) validate() error {
