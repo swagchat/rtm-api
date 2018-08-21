@@ -68,12 +68,6 @@
   version = "v1.7.0"
 
 [[projects]]
-  name = "github.com/fatih/structs"
-  packages = ["."]
-  revision = "a720dfa8df582c51dee1b36feabb906bde1588bd"
-  version = "v1.0"
-
-[[projects]]
   name = "github.com/fukata/golang-stats-api-handler"
   packages = ["."]
   revision = "90f0b59102629831cc109845475a8d77043412ec"
@@ -209,7 +203,7 @@
   branch = "master"
   name = "github.com/swagchat/protobuf"
   packages = ["protoc-gen-go"]
-  revision = "066902766d7f165c71ee29bcf0bdd45e27eb9f06"
+  revision = "edc1581d0a0cc5991496f978050d572bd5ad323f"
 
 [[projects]]
   name = "github.com/uber/jaeger-client-go"
@@ -310,6 +304,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "2ac36c775af6a1da3d49f346e61ac6647c401a98dbd28939ed4aa583b9f8b145"
+  inputs-digest = "826a7a33075bf8b19f8c4301caec2793e9b95950de8c76b29df288ce6c875aa6"
   solver-name = "gps-cdcl"
   solver-version = 1

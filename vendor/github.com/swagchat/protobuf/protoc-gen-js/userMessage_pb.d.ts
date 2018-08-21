@@ -45,10 +45,10 @@ export class User extends jspb.Message {
   getMetaData_asB64(): string;
   setMetaData(value: Uint8Array | string): void;
 
-  hasPublic(): boolean;
-  clearPublic(): void;
-  getPublic(): boolean | undefined;
-  setPublic(value: boolean): void;
+  hasPublicProfileScope(): boolean;
+  clearPublicProfileScope(): void;
+  getPublicProfileScope(): PublicProfileScope | undefined;
+  setPublicProfileScope(value: PublicProfileScope): void;
 
   hasCanBlock(): boolean;
   clearCanBlock(): void;
@@ -70,25 +70,40 @@ export class User extends jspb.Message {
   getLastAccessRoomId(): string | undefined;
   setLastAccessRoomId(value: string): void;
 
+  hasLastAccessedTimestamp(): boolean;
+  clearLastAccessedTimestamp(): void;
+  getLastAccessedTimestamp(): number | undefined;
+  setLastAccessedTimestamp(value: number): void;
+
   hasLastAccessed(): boolean;
   clearLastAccessed(): void;
-  getLastAccessed(): number | undefined;
-  setLastAccessed(value: number): void;
+  getLastAccessed(): string | undefined;
+  setLastAccessed(value: string): void;
+
+  hasCreatedTimestamp(): boolean;
+  clearCreatedTimestamp(): void;
+  getCreatedTimestamp(): number | undefined;
+  setCreatedTimestamp(value: number): void;
 
   hasCreated(): boolean;
   clearCreated(): void;
-  getCreated(): number | undefined;
-  setCreated(value: number): void;
+  getCreated(): string | undefined;
+  setCreated(value: string): void;
+
+  hasModifiedTimestamp(): boolean;
+  clearModifiedTimestamp(): void;
+  getModifiedTimestamp(): number | undefined;
+  setModifiedTimestamp(value: number): void;
 
   hasModified(): boolean;
   clearModified(): void;
-  getModified(): number | undefined;
-  setModified(value: number): void;
+  getModified(): string | undefined;
+  setModified(value: string): void;
 
-  hasDeleted(): boolean;
-  clearDeleted(): void;
-  getDeleted(): number | undefined;
-  setDeleted(value: number): void;
+  hasDeletedTimestamp(): boolean;
+  clearDeletedTimestamp(): void;
+  getDeletedTimestamp(): number | undefined;
+  setDeletedTimestamp(value: number): void;
 
   clearBlockUsersList(): void;
   getBlockUsersList(): Array<string>;
@@ -124,15 +139,18 @@ export namespace User {
     informationUrl?: string,
     unreadCount?: number,
     metaData: Uint8Array | string,
-    pb_public?: boolean,
+    publicProfileScope?: PublicProfileScope,
     canBlock?: boolean,
     lang?: string,
     accessToken?: string,
     lastAccessRoomId?: string,
-    lastAccessed?: number,
-    created?: number,
-    modified?: number,
-    deleted?: number,
+    lastAccessedTimestamp?: number,
+    lastAccessed?: string,
+    createdTimestamp?: number,
+    created?: string,
+    modifiedTimestamp?: number,
+    modified?: string,
+    deletedTimestamp?: number,
     blockUsersList: Array<string>,
     devicesList: Array<deviceMessage_pb.Device.AsObject>,
     rolesList: Array<number>,
@@ -182,25 +200,40 @@ export class MiniRoom extends jspb.Message {
   getLastMessage(): string | undefined;
   setLastMessage(value: string): void;
 
+  hasLastMessageUpdatedTimestamp(): boolean;
+  clearLastMessageUpdatedTimestamp(): void;
+  getLastMessageUpdatedTimestamp(): number | undefined;
+  setLastMessageUpdatedTimestamp(value: number): void;
+
   hasLastMessageUpdated(): boolean;
   clearLastMessageUpdated(): void;
-  getLastMessageUpdated(): number | undefined;
-  setLastMessageUpdated(value: number): void;
+  getLastMessageUpdated(): string | undefined;
+  setLastMessageUpdated(value: string): void;
 
   hasCanLeft(): boolean;
   clearCanLeft(): void;
   getCanLeft(): boolean | undefined;
   setCanLeft(value: boolean): void;
 
+  hasCreatedTimestamp(): boolean;
+  clearCreatedTimestamp(): void;
+  getCreatedTimestamp(): number | undefined;
+  setCreatedTimestamp(value: number): void;
+
   hasCreated(): boolean;
   clearCreated(): void;
-  getCreated(): number | undefined;
-  setCreated(value: number): void;
+  getCreated(): string | undefined;
+  setCreated(value: string): void;
+
+  hasModifiedTimestamp(): boolean;
+  clearModifiedTimestamp(): void;
+  getModifiedTimestamp(): number | undefined;
+  setModifiedTimestamp(value: number): void;
 
   hasModified(): boolean;
   clearModified(): void;
-  getModified(): number | undefined;
-  setModified(value: number): void;
+  getModified(): string | undefined;
+  setModified(value: string): void;
 
   clearUsersList(): void;
   getUsersList(): Array<roomMessage_pb.MiniUser>;
@@ -232,10 +265,13 @@ export namespace MiniRoom {
     metaData: Uint8Array | string,
     type?: roomMessage_pb.RoomType,
     lastMessage?: string,
-    lastMessageUpdated?: number,
+    lastMessageUpdatedTimestamp?: number,
+    lastMessageUpdated?: string,
     canLeft?: boolean,
-    created?: number,
-    modified?: number,
+    createdTimestamp?: number,
+    created?: string,
+    modifiedTimestamp?: number,
+    modified?: string,
     usersList: Array<roomMessage_pb.MiniUser.AsObject>,
     ruUnreadCount?: number,
   }
@@ -269,10 +305,10 @@ export class CreateUserRequest extends jspb.Message {
   getMetaData_asB64(): string;
   setMetaData(value: Uint8Array | string): void;
 
-  hasPublic(): boolean;
-  clearPublic(): void;
-  getPublic(): boolean | undefined;
-  setPublic(value: boolean): void;
+  hasPublicProfileScope(): boolean;
+  clearPublicProfileScope(): void;
+  getPublicProfileScope(): PublicProfileScope | undefined;
+  setPublicProfileScope(value: PublicProfileScope): void;
 
   hasCanBlock(): boolean;
   clearCanBlock(): void;
@@ -311,7 +347,7 @@ export namespace CreateUserRequest {
     pictureUrl?: string,
     informationUrl?: string,
     metaData: Uint8Array | string,
-    pb_public?: boolean,
+    publicProfileScope?: PublicProfileScope,
     canBlock?: boolean,
     lang?: string,
     blockUsersList: Array<string>,
@@ -319,7 +355,7 @@ export namespace CreateUserRequest {
   }
 }
 
-export class GetUsersRequest extends jspb.Message {
+export class RetrieveUsersRequest extends jspb.Message {
   hasLimit(): boolean;
   clearLimit(): void;
   getLimit(): number | undefined;
@@ -336,16 +372,16 @@ export class GetUsersRequest extends jspb.Message {
   addOrders(value?: commonMessage_pb.OrderInfo, index?: number): commonMessage_pb.OrderInfo;
 
   serializeBinary(): Uint8Array;
-  toObject(includeInstance?: boolean): GetUsersRequest.AsObject;
-  static toObject(includeInstance: boolean, msg: GetUsersRequest): GetUsersRequest.AsObject;
+  toObject(includeInstance?: boolean): RetrieveUsersRequest.AsObject;
+  static toObject(includeInstance: boolean, msg: RetrieveUsersRequest): RetrieveUsersRequest.AsObject;
   static extensions: {[key: number]: jspb.ExtensionFieldInfo<jspb.Message>};
   static extensionsBinary: {[key: number]: jspb.ExtensionFieldBinaryInfo<jspb.Message>};
-  static serializeBinaryToWriter(message: GetUsersRequest, writer: jspb.BinaryWriter): void;
-  static deserializeBinary(bytes: Uint8Array): GetUsersRequest;
-  static deserializeBinaryFromReader(message: GetUsersRequest, reader: jspb.BinaryReader): GetUsersRequest;
+  static serializeBinaryToWriter(message: RetrieveUsersRequest, writer: jspb.BinaryWriter): void;
+  static deserializeBinary(bytes: Uint8Array): RetrieveUsersRequest;
+  static deserializeBinaryFromReader(message: RetrieveUsersRequest, reader: jspb.BinaryReader): RetrieveUsersRequest;
 }
 
-export namespace GetUsersRequest {
+export namespace RetrieveUsersRequest {
   export type AsObject = {
     limit?: number,
     offset?: number,
@@ -399,23 +435,23 @@ export namespace UsersResponse {
   }
 }
 
-export class GetUserRequest extends jspb.Message {
+export class RetrieveUserRequest extends jspb.Message {
   hasUserId(): boolean;
   clearUserId(): void;
   getUserId(): string | undefined;
   setUserId(value: string): void;
 
   serializeBinary(): Uint8Array;
-  toObject(includeInstance?: boolean): GetUserRequest.AsObject;
-  static toObject(includeInstance: boolean, msg: GetUserRequest): GetUserRequest.AsObject;
+  toObject(includeInstance?: boolean): RetrieveUserRequest.AsObject;
+  static toObject(includeInstance: boolean, msg: RetrieveUserRequest): RetrieveUserRequest.AsObject;
   static extensions: {[key: number]: jspb.ExtensionFieldInfo<jspb.Message>};
   static extensionsBinary: {[key: number]: jspb.ExtensionFieldBinaryInfo<jspb.Message>};
-  static serializeBinaryToWriter(message: GetUserRequest, writer: jspb.BinaryWriter): void;
-  static deserializeBinary(bytes: Uint8Array): GetUserRequest;
-  static deserializeBinaryFromReader(message: GetUserRequest, reader: jspb.BinaryReader): GetUserRequest;
+  static serializeBinaryToWriter(message: RetrieveUserRequest, writer: jspb.BinaryWriter): void;
+  static deserializeBinary(bytes: Uint8Array): RetrieveUserRequest;
+  static deserializeBinaryFromReader(message: RetrieveUserRequest, reader: jspb.BinaryReader): RetrieveUserRequest;
 }
 
-export namespace GetUserRequest {
+export namespace RetrieveUserRequest {
   export type AsObject = {
     userId?: string,
   }
@@ -442,6 +478,11 @@ export class UpdateUserRequest extends jspb.Message {
   getInformationUrl(): string | undefined;
   setInformationUrl(value: string): void;
 
+  hasUnreadCount(): boolean;
+  clearUnreadCount(): void;
+  getUnreadCount(): number | undefined;
+  setUnreadCount(value: number): void;
+
   hasMetaData(): boolean;
   clearMetaData(): void;
   getMetaData(): Uint8Array | string;
@@ -449,10 +490,10 @@ export class UpdateUserRequest extends jspb.Message {
   getMetaData_asB64(): string;
   setMetaData(value: Uint8Array | string): void;
 
-  hasPublic(): boolean;
-  clearPublic(): void;
-  getPublic(): boolean | undefined;
-  setPublic(value: boolean): void;
+  hasPublicProfileScope(): boolean;
+  clearPublicProfileScope(): void;
+  getPublicProfileScope(): PublicProfileScope | undefined;
+  setPublicProfileScope(value: PublicProfileScope): void;
 
   hasCanBlock(): boolean;
   clearCanBlock(): void;
@@ -490,8 +531,9 @@ export namespace UpdateUserRequest {
     name?: string,
     pictureUrl?: string,
     informationUrl?: string,
+    unreadCount?: number,
     metaData: Uint8Array | string,
-    pb_public?: boolean,
+    publicProfileScope?: PublicProfileScope,
     canBlock?: boolean,
     lang?: string,
     blockUsersList: Array<string>,
@@ -521,7 +563,12 @@ export namespace DeleteUserRequest {
   }
 }
 
-export class GetUserRoomsRequest extends jspb.Message {
+export class RetrieveUserRoomsRequest extends jspb.Message {
+  hasUserId(): boolean;
+  clearUserId(): void;
+  getUserId(): string | undefined;
+  setUserId(value: string): void;
+
   hasLimit(): boolean;
   clearLimit(): void;
   getLimit(): number | undefined;
@@ -536,11 +583,6 @@ export class GetUserRoomsRequest extends jspb.Message {
   getOrdersList(): Array<commonMessage_pb.OrderInfo>;
   setOrdersList(value: Array<commonMessage_pb.OrderInfo>): void;
   addOrders(value?: commonMessage_pb.OrderInfo, index?: number): commonMessage_pb.OrderInfo;
-
-  hasUserId(): boolean;
-  clearUserId(): void;
-  getUserId(): string | undefined;
-  setUserId(value: string): void;
 
   hasFilter(): boolean;
   clearFilter(): void;
@@ -548,36 +590,26 @@ export class GetUserRoomsRequest extends jspb.Message {
   setFilter(value: UserRoomsFilter): void;
 
   serializeBinary(): Uint8Array;
-  toObject(includeInstance?: boolean): GetUserRoomsRequest.AsObject;
-  static toObject(includeInstance: boolean, msg: GetUserRoomsRequest): GetUserRoomsRequest.AsObject;
+  toObject(includeInstance?: boolean): RetrieveUserRoomsRequest.AsObject;
+  static toObject(includeInstance: boolean, msg: RetrieveUserRoomsRequest): RetrieveUserRoomsRequest.AsObject;
   static extensions: {[key: number]: jspb.ExtensionFieldInfo<jspb.Message>};
   static extensionsBinary: {[key: number]: jspb.ExtensionFieldBinaryInfo<jspb.Message>};
-  static serializeBinaryToWriter(message: GetUserRoomsRequest, writer: jspb.BinaryWriter): void;
-  static deserializeBinary(bytes: Uint8Array): GetUserRoomsRequest;
-  static deserializeBinaryFromReader(message: GetUserRoomsRequest, reader: jspb.BinaryReader): GetUserRoomsRequest;
+  static serializeBinaryToWriter(message: RetrieveUserRoomsRequest, writer: jspb.BinaryWriter): void;
+  static deserializeBinary(bytes: Uint8Array): RetrieveUserRoomsRequest;
+  static deserializeBinaryFromReader(message: RetrieveUserRoomsRequest, reader: jspb.BinaryReader): RetrieveUserRoomsRequest;
 }
 
-export namespace GetUserRoomsRequest {
+export namespace RetrieveUserRoomsRequest {
   export type AsObject = {
+    userId?: string,
     limit?: number,
     offset?: number,
     ordersList: Array<commonMessage_pb.OrderInfo.AsObject>,
-    userId?: string,
     filter?: UserRoomsFilter,
   }
 }
 
 export class UserRoomsResponse extends jspb.Message {
-  clearRoomsList(): void;
-  getRoomsList(): Array<MiniRoom>;
-  setRoomsList(value: Array<MiniRoom>): void;
-  addRooms(value?: MiniRoom, index?: number): MiniRoom;
-
-  hasAllcount(): boolean;
-  clearAllcount(): void;
-  getAllcount(): number | undefined;
-  setAllcount(value: number): void;
-
   hasLimit(): boolean;
   clearLimit(): void;
   getLimit(): number | undefined;
@@ -592,6 +624,21 @@ export class UserRoomsResponse extends jspb.Message {
   getOrdersList(): Array<commonMessage_pb.OrderInfo>;
   setOrdersList(value: Array<commonMessage_pb.OrderInfo>): void;
   addOrders(value?: commonMessage_pb.OrderInfo, index?: number): commonMessage_pb.OrderInfo;
+
+  hasFilter(): boolean;
+  clearFilter(): void;
+  getFilter(): UserRoomsFilter | undefined;
+  setFilter(value: UserRoomsFilter): void;
+
+  hasAllcount(): boolean;
+  clearAllcount(): void;
+  getAllcount(): number | undefined;
+  setAllcount(value: number): void;
+
+  clearRoomsList(): void;
+  getRoomsList(): Array<MiniRoom>;
+  setRoomsList(value: Array<MiniRoom>): void;
+  addRooms(value?: MiniRoom, index?: number): MiniRoom;
 
   serializeBinary(): Uint8Array;
   toObject(includeInstance?: boolean): UserRoomsResponse.AsObject;
@@ -605,15 +652,16 @@ export class UserRoomsResponse extends jspb.Message {
 
 export namespace UserRoomsResponse {
   export type AsObject = {
-    roomsList: Array<MiniRoom.AsObject>,
-    allcount?: number,
     limit?: number,
     offset?: number,
     ordersList: Array<commonMessage_pb.OrderInfo.AsObject>,
+    filter?: UserRoomsFilter,
+    allcount?: number,
+    roomsList: Array<MiniRoom.AsObject>,
   }
 }
 
-export class GetContactsRequest extends jspb.Message {
+export class RetrieveContactsRequest extends jspb.Message {
   hasUserId(): boolean;
   clearUserId(): void;
   getUserId(): string | undefined;
@@ -635,16 +683,16 @@ export class GetContactsRequest extends jspb.Message {
   addOrders(value?: commonMessage_pb.OrderInfo, index?: number): commonMessage_pb.OrderInfo;
 
   serializeBinary(): Uint8Array;
-  toObject(includeInstance?: boolean): GetContactsRequest.AsObject;
-  static toObject(includeInstance: boolean, msg: GetContactsRequest): GetContactsRequest.AsObject;
+  toObject(includeInstance?: boolean): RetrieveContactsRequest.AsObject;
+  static toObject(includeInstance: boolean, msg: RetrieveContactsRequest): RetrieveContactsRequest.AsObject;
   static extensions: {[key: number]: jspb.ExtensionFieldInfo<jspb.Message>};
   static extensionsBinary: {[key: number]: jspb.ExtensionFieldBinaryInfo<jspb.Message>};
-  static serializeBinaryToWriter(message: GetContactsRequest, writer: jspb.BinaryWriter): void;
-  static deserializeBinary(bytes: Uint8Array): GetContactsRequest;
-  static deserializeBinaryFromReader(message: GetContactsRequest, reader: jspb.BinaryReader): GetContactsRequest;
+  static serializeBinaryToWriter(message: RetrieveContactsRequest, writer: jspb.BinaryWriter): void;
+  static deserializeBinary(bytes: Uint8Array): RetrieveContactsRequest;
+  static deserializeBinaryFromReader(message: RetrieveContactsRequest, reader: jspb.BinaryReader): RetrieveContactsRequest;
 }
 
-export namespace GetContactsRequest {
+export namespace RetrieveContactsRequest {
   export type AsObject = {
     userId?: string,
     limit?: number,
@@ -653,45 +701,45 @@ export namespace GetContactsRequest {
   }
 }
 
-export class GetProfileRequest extends jspb.Message {
+export class RetrieveProfileRequest extends jspb.Message {
   hasUserId(): boolean;
   clearUserId(): void;
   getUserId(): string | undefined;
   setUserId(value: string): void;
 
   serializeBinary(): Uint8Array;
-  toObject(includeInstance?: boolean): GetProfileRequest.AsObject;
-  static toObject(includeInstance: boolean, msg: GetProfileRequest): GetProfileRequest.AsObject;
+  toObject(includeInstance?: boolean): RetrieveProfileRequest.AsObject;
+  static toObject(includeInstance: boolean, msg: RetrieveProfileRequest): RetrieveProfileRequest.AsObject;
   static extensions: {[key: number]: jspb.ExtensionFieldInfo<jspb.Message>};
   static extensionsBinary: {[key: number]: jspb.ExtensionFieldBinaryInfo<jspb.Message>};
-  static serializeBinaryToWriter(message: GetProfileRequest, writer: jspb.BinaryWriter): void;
-  static deserializeBinary(bytes: Uint8Array): GetProfileRequest;
-  static deserializeBinaryFromReader(message: GetProfileRequest, reader: jspb.BinaryReader): GetProfileRequest;
+  static serializeBinaryToWriter(message: RetrieveProfileRequest, writer: jspb.BinaryWriter): void;
+  static deserializeBinary(bytes: Uint8Array): RetrieveProfileRequest;
+  static deserializeBinaryFromReader(message: RetrieveProfileRequest, reader: jspb.BinaryReader): RetrieveProfileRequest;
 }
 
-export namespace GetProfileRequest {
+export namespace RetrieveProfileRequest {
   export type AsObject = {
     userId?: string,
   }
 }
 
-export class GetRoleUsersRequest extends jspb.Message {
+export class RetrieveRoleUsersRequest extends jspb.Message {
   hasRoleId(): boolean;
   clearRoleId(): void;
   getRoleId(): number | undefined;
   setRoleId(value: number): void;
 
   serializeBinary(): Uint8Array;
-  toObject(includeInstance?: boolean): GetRoleUsersRequest.AsObject;
-  static toObject(includeInstance: boolean, msg: GetRoleUsersRequest): GetRoleUsersRequest.AsObject;
+  toObject(includeInstance?: boolean): RetrieveRoleUsersRequest.AsObject;
+  static toObject(includeInstance: boolean, msg: RetrieveRoleUsersRequest): RetrieveRoleUsersRequest.AsObject;
   static extensions: {[key: number]: jspb.ExtensionFieldInfo<jspb.Message>};
   static extensionsBinary: {[key: number]: jspb.ExtensionFieldBinaryInfo<jspb.Message>};
-  static serializeBinaryToWriter(message: GetRoleUsersRequest, writer: jspb.BinaryWriter): void;
-  static deserializeBinary(bytes: Uint8Array): GetRoleUsersRequest;
-  static deserializeBinaryFromReader(message: GetRoleUsersRequest, reader: jspb.BinaryReader): GetRoleUsersRequest;
+  static serializeBinaryToWriter(message: RetrieveRoleUsersRequest, writer: jspb.BinaryWriter): void;
+  static deserializeBinary(bytes: Uint8Array): RetrieveRoleUsersRequest;
+  static deserializeBinaryFromReader(message: RetrieveRoleUsersRequest, reader: jspb.BinaryReader): RetrieveRoleUsersRequest;
 }
 
-export namespace GetRoleUsersRequest {
+export namespace RetrieveRoleUsersRequest {
   export type AsObject = {
     roleId?: number,
   }
@@ -726,7 +774,13 @@ export namespace RoleUsersResponse {
 }
 
 export enum UserRoomsFilter {
-  ONLINE = 0,
-  UNREAD = 1,
+  NONE = 0,
+  ONLINE = 1,
+  UNREAD = 2,
+}
+
+export enum PublicProfileScope {
+  SELF = 0,
+  ALL = 1,
 }
 

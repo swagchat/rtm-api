@@ -88,25 +88,30 @@ export class Message extends jspb.Message {
   getRole(): number | undefined;
   setRole(value: number): void;
 
+  hasCreatedTimestamp(): boolean;
+  clearCreatedTimestamp(): void;
+  getCreatedTimestamp(): number | undefined;
+  setCreatedTimestamp(value: number): void;
+
   hasCreated(): boolean;
   clearCreated(): void;
-  getCreated(): number | undefined;
-  setCreated(value: number): void;
+  getCreated(): string | undefined;
+  setCreated(value: string): void;
+
+  hasModifiedTimestamp(): boolean;
+  clearModifiedTimestamp(): void;
+  getModifiedTimestamp(): number | undefined;
+  setModifiedTimestamp(value: number): void;
 
   hasModified(): boolean;
   clearModified(): void;
-  getModified(): number | undefined;
-  setModified(value: number): void;
+  getModified(): string | undefined;
+  setModified(value: string): void;
 
-  hasDeleted(): boolean;
-  clearDeleted(): void;
-  getDeleted(): number | undefined;
-  setDeleted(value: number): void;
-
-  hasEventName(): boolean;
-  clearEventName(): void;
-  getEventName(): string | undefined;
-  setEventName(value: string): void;
+  hasDeletedTimestamp(): boolean;
+  clearDeletedTimestamp(): void;
+  getDeletedTimestamp(): number | undefined;
+  setDeletedTimestamp(value: number): void;
 
   clearUserIdsList(): void;
   getUserIdsList(): Array<string>;
@@ -132,10 +137,11 @@ export namespace Message {
     type?: string,
     payload: Uint8Array | string,
     role?: number,
-    created?: number,
-    modified?: number,
-    deleted?: number,
-    eventName?: string,
+    createdTimestamp?: number,
+    created?: string,
+    modifiedTimestamp?: number,
+    modified?: string,
+    deletedTimestamp?: number,
     userIdsList: Array<string>,
   }
 }
@@ -198,7 +204,7 @@ export namespace MessagePayload {
   }
 }
 
-export class CreateMessageRequest extends jspb.Message {
+export class SendMessageRequest extends jspb.Message {
   hasMessageId(): boolean;
   clearMessageId(): void;
   getMessageId(): string | undefined;
@@ -231,22 +237,17 @@ export class CreateMessageRequest extends jspb.Message {
   getRole(): number | undefined;
   setRole(value: number): void;
 
-  hasEventName(): boolean;
-  clearEventName(): void;
-  getEventName(): string | undefined;
-  setEventName(value: string): void;
-
   serializeBinary(): Uint8Array;
-  toObject(includeInstance?: boolean): CreateMessageRequest.AsObject;
-  static toObject(includeInstance: boolean, msg: CreateMessageRequest): CreateMessageRequest.AsObject;
+  toObject(includeInstance?: boolean): SendMessageRequest.AsObject;
+  static toObject(includeInstance: boolean, msg: SendMessageRequest): SendMessageRequest.AsObject;
   static extensions: {[key: number]: jspb.ExtensionFieldInfo<jspb.Message>};
   static extensionsBinary: {[key: number]: jspb.ExtensionFieldBinaryInfo<jspb.Message>};
-  static serializeBinaryToWriter(message: CreateMessageRequest, writer: jspb.BinaryWriter): void;
-  static deserializeBinary(bytes: Uint8Array): CreateMessageRequest;
-  static deserializeBinaryFromReader(message: CreateMessageRequest, reader: jspb.BinaryReader): CreateMessageRequest;
+  static serializeBinaryToWriter(message: SendMessageRequest, writer: jspb.BinaryWriter): void;
+  static deserializeBinary(bytes: Uint8Array): SendMessageRequest;
+  static deserializeBinaryFromReader(message: SendMessageRequest, reader: jspb.BinaryReader): SendMessageRequest;
 }
 
-export namespace CreateMessageRequest {
+export namespace SendMessageRequest {
   export type AsObject = {
     messageId?: string,
     roomId?: string,
@@ -254,7 +255,6 @@ export namespace CreateMessageRequest {
     type?: string,
     payload: Uint8Array | string,
     role?: number,
-    eventName?: string,
   }
 }
 

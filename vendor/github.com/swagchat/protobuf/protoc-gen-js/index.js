@@ -1,13 +1,9 @@
-export * from './commonMessage_pb.d.ts'
-export * from './deviceMessage_pb.d.ts'
-export * from './messageMessage_pb.d.ts'
-export * from './messageService_pb.d.ts'
-export * from './roomMessage_pb.d.ts'
-export * from './roomService_pb.d.ts'
-export * from './roomUserMessage_pb.d.ts'
-export * from './roomUserService_pb.d.ts'
-export * from './userMessage_pb.d.ts'
-export * from './userRoleMessage_pb.d.ts'
-export * from './userRoleService_pb.d.ts'
-export * from './userService_pb.d.ts'
-export * from './webhookService_pb.d.ts'
+require('./commonMessage_pb');
+require('./blockUserMessage_pb');
+require('./deviceMessage_pb');
+require('./eventMessage_pb');
+require('./messageMessage_pb');
+require('./roomMessage_pb');
+require('./roomUserMessage_pb');
+require('./userMessage_pb');
+require('./userRoleMessage_pb');

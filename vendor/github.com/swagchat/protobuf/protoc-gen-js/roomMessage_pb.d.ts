@@ -69,10 +69,15 @@ export class Room extends jspb.Message {
   getLastMessage(): string | undefined;
   setLastMessage(value: string): void;
 
+  hasLastMessageUpdatedTimestamp(): boolean;
+  clearLastMessageUpdatedTimestamp(): void;
+  getLastMessageUpdatedTimestamp(): number | undefined;
+  setLastMessageUpdatedTimestamp(value: number): void;
+
   hasLastMessageUpdated(): boolean;
   clearLastMessageUpdated(): void;
-  getLastMessageUpdated(): number | undefined;
-  setLastMessageUpdated(value: number): void;
+  getLastMessageUpdated(): string | undefined;
+  setLastMessageUpdated(value: string): void;
 
   hasMessageCount(): boolean;
   clearMessageCount(): void;
@@ -84,20 +89,30 @@ export class Room extends jspb.Message {
   getNotificationTopicId(): string | undefined;
   setNotificationTopicId(value: string): void;
 
+  hasCreatedTimestamp(): boolean;
+  clearCreatedTimestamp(): void;
+  getCreatedTimestamp(): number | undefined;
+  setCreatedTimestamp(value: number): void;
+
   hasCreated(): boolean;
   clearCreated(): void;
-  getCreated(): number | undefined;
-  setCreated(value: number): void;
+  getCreated(): string | undefined;
+  setCreated(value: string): void;
+
+  hasModifiedTimestamp(): boolean;
+  clearModifiedTimestamp(): void;
+  getModifiedTimestamp(): number | undefined;
+  setModifiedTimestamp(value: number): void;
 
   hasModified(): boolean;
   clearModified(): void;
-  getModified(): number | undefined;
-  setModified(value: number): void;
+  getModified(): string | undefined;
+  setModified(value: string): void;
 
-  hasDeleted(): boolean;
-  clearDeleted(): void;
-  getDeleted(): number | undefined;
-  setDeleted(value: number): void;
+  hasDeletedTimestamp(): boolean;
+  clearDeletedTimestamp(): void;
+  getDeletedTimestamp(): number | undefined;
+  setDeletedTimestamp(value: number): void;
 
   clearUsersList(): void;
   getUsersList(): Array<MiniUser>;
@@ -128,17 +143,25 @@ export namespace Room {
     metaData: Uint8Array | string,
     availableMessageTypes?: string,
     lastMessage?: string,
-    lastMessageUpdated?: number,
+    lastMessageUpdatedTimestamp?: number,
+    lastMessageUpdated?: string,
     messageCount?: number,
     notificationTopicId?: string,
-    created?: number,
-    modified?: number,
-    deleted?: number,
+    createdTimestamp?: number,
+    created?: string,
+    modifiedTimestamp?: number,
+    modified?: string,
+    deletedTimestamp?: number,
     usersList: Array<MiniUser.AsObject>,
   }
 }
 
 export class MiniUser extends jspb.Message {
+  hasRoomId(): boolean;
+  clearRoomId(): void;
+  getRoomId(): string | undefined;
+  setRoomId(value: string): void;
+
   hasUserId(): boolean;
   clearUserId(): void;
   getUserId(): string | undefined;
@@ -171,25 +194,40 @@ export class MiniUser extends jspb.Message {
   getCanBlock(): boolean | undefined;
   setCanBlock(value: boolean): void;
 
+  hasLastAccessedTimestamp(): boolean;
+  clearLastAccessedTimestamp(): void;
+  getLastAccessedTimestamp(): number | undefined;
+  setLastAccessedTimestamp(value: number): void;
+
   hasLastAccessed(): boolean;
   clearLastAccessed(): void;
-  getLastAccessed(): number | undefined;
-  setLastAccessed(value: number): void;
+  getLastAccessed(): string | undefined;
+  setLastAccessed(value: string): void;
 
   hasRuDisplay(): boolean;
   clearRuDisplay(): void;
   getRuDisplay(): boolean | undefined;
   setRuDisplay(value: boolean): void;
 
+  hasCreatedTimestamp(): boolean;
+  clearCreatedTimestamp(): void;
+  getCreatedTimestamp(): number | undefined;
+  setCreatedTimestamp(value: number): void;
+
   hasCreated(): boolean;
   clearCreated(): void;
-  getCreated(): number | undefined;
-  setCreated(value: number): void;
+  getCreated(): string | undefined;
+  setCreated(value: string): void;
+
+  hasModifiedTimestamp(): boolean;
+  clearModifiedTimestamp(): void;
+  getModifiedTimestamp(): number | undefined;
+  setModifiedTimestamp(value: number): void;
 
   hasModified(): boolean;
   clearModified(): void;
-  getModified(): number | undefined;
-  setModified(value: number): void;
+  getModified(): string | undefined;
+  setModified(value: string): void;
 
   serializeBinary(): Uint8Array;
   toObject(includeInstance?: boolean): MiniUser.AsObject;
@@ -203,16 +241,20 @@ export class MiniUser extends jspb.Message {
 
 export namespace MiniUser {
   export type AsObject = {
+    roomId?: string,
     userId?: string,
     name?: string,
     pictureUrl?: string,
     informationUrl?: string,
     metaData: Uint8Array | string,
     canBlock?: boolean,
-    lastAccessed?: number,
+    lastAccessedTimestamp?: number,
+    lastAccessed?: string,
     ruDisplay?: boolean,
-    created?: number,
-    modified?: number,
+    createdTimestamp?: number,
+    created?: string,
+    modifiedTimestamp?: number,
+    modified?: string,
   }
 }
 
@@ -300,7 +342,7 @@ export namespace CreateRoomRequest {
   }
 }
 
-export class GetRoomsRequest extends jspb.Message {
+export class RetrieveRoomsRequest extends jspb.Message {
   hasLimit(): boolean;
   clearLimit(): void;
   getLimit(): number | undefined;
@@ -322,16 +364,16 @@ export class GetRoomsRequest extends jspb.Message {
   setUserId(value: string): void;
 
   serializeBinary(): Uint8Array;
-  toObject(includeInstance?: boolean): GetRoomsRequest.AsObject;
-  static toObject(includeInstance: boolean, msg: GetRoomsRequest): GetRoomsRequest.AsObject;
+  toObject(includeInstance?: boolean): RetrieveRoomsRequest.AsObject;
+  static toObject(includeInstance: boolean, msg: RetrieveRoomsRequest): RetrieveRoomsRequest.AsObject;
   static extensions: {[key: number]: jspb.ExtensionFieldInfo<jspb.Message>};
   static extensionsBinary: {[key: number]: jspb.ExtensionFieldBinaryInfo<jspb.Message>};
-  static serializeBinaryToWriter(message: GetRoomsRequest, writer: jspb.BinaryWriter): void;
-  static deserializeBinary(bytes: Uint8Array): GetRoomsRequest;
-  static deserializeBinaryFromReader(message: GetRoomsRequest, reader: jspb.BinaryReader): GetRoomsRequest;
+  static serializeBinaryToWriter(message: RetrieveRoomsRequest, writer: jspb.BinaryWriter): void;
+  static deserializeBinary(bytes: Uint8Array): RetrieveRoomsRequest;
+  static deserializeBinaryFromReader(message: RetrieveRoomsRequest, reader: jspb.BinaryReader): RetrieveRoomsRequest;
 }
 
-export namespace GetRoomsRequest {
+export namespace RetrieveRoomsRequest {
   export type AsObject = {
     limit?: number,
     offset?: number,
@@ -386,23 +428,23 @@ export namespace RoomsResponse {
   }
 }
 
-export class GetRoomRequest extends jspb.Message {
+export class RetrieveRoomRequest extends jspb.Message {
   hasRoomId(): boolean;
   clearRoomId(): void;
   getRoomId(): string | undefined;
   setRoomId(value: string): void;
 
   serializeBinary(): Uint8Array;
-  toObject(includeInstance?: boolean): GetRoomRequest.AsObject;
-  static toObject(includeInstance: boolean, msg: GetRoomRequest): GetRoomRequest.AsObject;
+  toObject(includeInstance?: boolean): RetrieveRoomRequest.AsObject;
+  static toObject(includeInstance: boolean, msg: RetrieveRoomRequest): RetrieveRoomRequest.AsObject;
   static extensions: {[key: number]: jspb.ExtensionFieldInfo<jspb.Message>};
   static extensionsBinary: {[key: number]: jspb.ExtensionFieldBinaryInfo<jspb.Message>};
-  static serializeBinaryToWriter(message: GetRoomRequest, writer: jspb.BinaryWriter): void;
-  static deserializeBinary(bytes: Uint8Array): GetRoomRequest;
-  static deserializeBinaryFromReader(message: GetRoomRequest, reader: jspb.BinaryReader): GetRoomRequest;
+  static serializeBinaryToWriter(message: RetrieveRoomRequest, writer: jspb.BinaryWriter): void;
+  static deserializeBinary(bytes: Uint8Array): RetrieveRoomRequest;
+  static deserializeBinaryFromReader(message: RetrieveRoomRequest, reader: jspb.BinaryReader): RetrieveRoomRequest;
 }
 
-export namespace GetRoomRequest {
+export namespace RetrieveRoomRequest {
   export type AsObject = {
     roomId?: string,
   }
@@ -508,7 +550,7 @@ export namespace DeleteRoomRequest {
   }
 }
 
-export class GetRoomMessagesRequest extends jspb.Message {
+export class RetrieveRoomMessagesRequest extends jspb.Message {
   hasLimit(): boolean;
   clearLimit(): void;
   getLimit(): number | undefined;
@@ -535,16 +577,16 @@ export class GetRoomMessagesRequest extends jspb.Message {
   addRoleIds(value: number, index?: number): number;
 
   serializeBinary(): Uint8Array;
-  toObject(includeInstance?: boolean): GetRoomMessagesRequest.AsObject;
-  static toObject(includeInstance: boolean, msg: GetRoomMessagesRequest): GetRoomMessagesRequest.AsObject;
+  toObject(includeInstance?: boolean): RetrieveRoomMessagesRequest.AsObject;
+  static toObject(includeInstance: boolean, msg: RetrieveRoomMessagesRequest): RetrieveRoomMessagesRequest.AsObject;
   static extensions: {[key: number]: jspb.ExtensionFieldInfo<jspb.Message>};
   static extensionsBinary: {[key: number]: jspb.ExtensionFieldBinaryInfo<jspb.Message>};
-  static serializeBinaryToWriter(message: GetRoomMessagesRequest, writer: jspb.BinaryWriter): void;
-  static deserializeBinary(bytes: Uint8Array): GetRoomMessagesRequest;
-  static deserializeBinaryFromReader(message: GetRoomMessagesRequest, reader: jspb.BinaryReader): GetRoomMessagesRequest;
+  static serializeBinaryToWriter(message: RetrieveRoomMessagesRequest, writer: jspb.BinaryWriter): void;
+  static deserializeBinary(bytes: Uint8Array): RetrieveRoomMessagesRequest;
+  static deserializeBinaryFromReader(message: RetrieveRoomMessagesRequest, reader: jspb.BinaryReader): RetrieveRoomMessagesRequest;
 }
 
-export namespace GetRoomMessagesRequest {
+export namespace RetrieveRoomMessagesRequest {
   export type AsObject = {
     limit?: number,
     offset?: number,
@@ -613,20 +655,18 @@ export namespace RoomMessagesResponse {
 }
 
 export enum RoomType {
-  ROOMTYPENONE = 0,
-  ROOMTYPEONEONONE = 1,
-  ROOMTYPEPRIVATEROOM = 2,
-  ROOMTYPEPUBLICROOM = 3,
-  ROOMTYPENOTICEROOM = 4,
+  ONEONONEROOM = 0,
+  PRIVATEROOM = 1,
+  PUBLICROOM = 2,
+  NOTICEROOM = 3,
 }
 
 export enum SpeechMode {
   SPEECHMODENONE = 0,
-  SPEECHMODEWAKEUPWEBTOWEB = 1,
-  SPEECHMODEWAKEUPWEBTOCLOUD = 2,
-  SPEECHMODEWAKEUPCLOUDTOCLOUD = 3,
-  SPEECHMODEALWAYS = 4,
-  SPEECHMODEMANUAL = 5,
-  SPEECHMODEEND = 6,
+  WAKEUPWEBTOWEB = 1,
+  WAKEUPWEBTOCLOUD = 2,
+  WAKEUPCLOUDTOCLOUD = 3,
+  ALWAYS = 4,
+  MANUAL = 5,
 }
 
