@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/gorilla/websocket"
+	scpb "github.com/swagchat/protobuf/protoc-gen-go"
 	"github.com/swagchat/rtm-api/config"
 	"github.com/swagchat/rtm-api/logger"
 )
@@ -32,9 +33,9 @@ type Client struct {
 
 type RcvData struct {
 	UserId    string
-	RoomId    string `json:roomId`
-	EventName string `json:eventName`
-	Action    string `json:action,omitempty`
+	RoomId    string
+	EventType scpb.EventType
+	Action    string
 	Client    *Client
 }
 
@@ -94,7 +95,7 @@ func (c *Client) WritePump() {
 			}
 
 			c.Conn.SetWriteDeadline(time.Now().Add(writeWait))
-			w, err := c.Conn.NextWriter(websocket.TextMessage)
+			w, err := c.Conn.NextWriter(websocket.BinaryMessage)
 			if err != nil {
 				logger.Error(err.Error())
 				return

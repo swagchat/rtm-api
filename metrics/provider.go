@@ -5,19 +5,20 @@ import (
 	"time"
 
 	stats "github.com/fukata/golang-stats-api-handler"
+	scpb "github.com/swagchat/protobuf/protoc-gen-go"
 	"github.com/swagchat/rtm-api/config"
 	"github.com/swagchat/rtm-api/rtm"
 )
 
 type Metrics struct {
-	Hostname       string                    `json:"hostname"`
-	Stats          *stats.Stats              `json:"stats"`
-	AllCount       int                       `json:"allCount"`
-	UserCount      int                       `json:"userCount"`
-	EventCount     int                       `json:"eventCount"`
-	EachUserCount  map[string]int            `json:"eachUserCount,omitempty"`
-	EachEventCount map[string]map[string]int `json:"eachEventCount,omitempty"`
-	Timestamp      string                    `json:"timestamp"`
+	Hostname       string                            `json:"hostname"`
+	Stats          *stats.Stats                      `json:"stats"`
+	AllCount       int                               `json:"allCount"`
+	UserCount      int                               `json:"userCount"`
+	EventCount     int                               `json:"eventCount"`
+	EachUserCount  map[string]int                    `json:"eachUserCount,omitempty"`
+	EachEventCount map[scpb.EventType]map[string]int `json:"eachEventCount,omitempty"`
+	Timestamp      string                            `json:"timestamp"`
 }
 
 type provider interface {

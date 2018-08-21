@@ -8,7 +8,7 @@ import (
 	"github.com/swagchat/rtm-api/logger"
 )
 
-var srv *server = NewServer()
+var srv = NewServer()
 
 type server struct {
 	Connection *Connection
@@ -22,7 +22,7 @@ func NewServer() *server {
 	conn := &Connection{
 		clients: make(map[*Client]bool),
 		users:   make(map[string]*UserClients),
-		events:  make(map[string]*EventClients),
+		events:  make(map[scpb.EventType]*EventClients),
 	}
 
 	srv := &server{
@@ -43,15 +43,15 @@ func (s *server) Run() {
 	for {
 		select {
 		case rcvData := <-s.Register:
-			logger.Info(fmt.Sprintf("Register event userId[%s] roomId[%s] eventName[%s] client[%p]", rcvData.UserId, rcvData.RoomId, rcvData.EventName, rcvData.Client.Conn))
-			s.Connection.RemoveEvent(rcvData.UserId, rcvData.EventName, rcvData.Client)
+			logger.Info(fmt.Sprintf("Register event userId[%s] roomId[%s] eventType[%d] client[%p]", rcvData.UserId, rcvData.RoomId, rcvData.EventType, rcvData.Client.Conn))
+			s.Connection.RemoveEvent(rcvData.UserId, rcvData.EventType, rcvData.Client)
 
 			s.Connection.clients[rcvData.Client] = true
-			s.Connection.AddEvent(rcvData.UserId, rcvData.EventName, rcvData.Client)
+			s.Connection.AddEvent(rcvData.UserId, rcvData.EventType, rcvData.Client)
 
 		case rcvData := <-s.Unregister:
-			logger.Info(fmt.Sprintf("Unregister event userId[%s] roomId[%s] eventName[%s] client[%p]", rcvData.UserId, rcvData.RoomId, rcvData.EventName, rcvData.Client.Conn))
-			s.Connection.RemoveEvent(rcvData.UserId, rcvData.EventName, rcvData.Client)
+			logger.Info(fmt.Sprintf("Unregister event userId[%s] roomId[%s] eventType[%d] client[%p]", rcvData.UserId, rcvData.RoomId, rcvData.EventType, rcvData.Client.Conn))
+			s.Connection.RemoveEvent(rcvData.UserId, rcvData.EventType, rcvData.Client)
 
 		case c := <-s.Close:
 			logger.Info("Closing socket")
@@ -65,22 +65,22 @@ func (s *server) Run() {
 	}
 }
 
-func (s *server) broadcast(message []byte) {
-	var rtmEvent scpb.Message
-	json.Unmarshal(message, &rtmEvent)
+func (s *server) broadcast(event []byte) {
+	var pbEventData scpb.EventData
+	json.Unmarshal(event, &pbEventData)
 
-	if _, ok := s.Connection.events[rtmEvent.Type]; !ok {
+	if _, ok := s.Connection.events[pbEventData.Type]; !ok {
 		return
 	}
 
-	for _, userID := range rtmEvent.UserIDs {
-		if user, ok := s.Connection.events[rtmEvent.Type].users[userID]; ok {
+	for _, userID := range pbEventData.UserIDs {
+		if user, ok := s.Connection.events[pbEventData.Type].users[userID]; ok {
 			for conn := range user.clients {
 				if conn == nil {
 					continue
 				}
 				select {
-				case conn.Send <- rtmEvent.Payload:
+				case conn.Send <- event:
 				default:
 					close(conn.Send)
 					delete(srv.Connection.clients, conn)

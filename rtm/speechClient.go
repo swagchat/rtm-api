@@ -113,8 +113,7 @@ func PostSpeech(c *SpeechClient, data []byte) {
 					ps := fmt.Sprintf(`{\"text\":\"%s\"}`, transcript)
 					payload.UnmarshalJSON([]byte(ps))
 					m := &scpb.Message{
-						EventName: "speech2text",
-						Payload:   *payload,
+						Payload: *payload,
 					}
 					mBytes, err := json.Marshal(m)
 					if err != nil {

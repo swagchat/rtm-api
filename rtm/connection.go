@@ -3,13 +3,14 @@ package rtm
 import (
 	"fmt"
 
+	scpb "github.com/swagchat/protobuf/protoc-gen-go"
 	"github.com/swagchat/rtm-api/logger"
 )
 
 type Connection struct {
 	clients map[*Client]bool
-	users   map[string]*UserClients  // index is userId
-	events  map[string]*EventClients // index is eventName
+	users   map[string]*UserClients          // index is userId
+	events  map[scpb.EventType]*EventClients // index is eventName
 }
 
 type UserClients struct {
@@ -74,12 +75,16 @@ func (con *Connection) RemoveClient(c *Client) {
 	}
 }
 
-func (con *Connection) AddEvent(userId, eventName string, c *Client) {
-	if userId == "" || eventName == "" || c == nil {
+func (con *Connection) AddEvent(userId string, eventType scpb.EventType, c *Client) {
+	if userId == "" || c == nil {
 		return
 	}
 
-	if _, ok := con.events[eventName]; !ok {
+	if eventType != scpb.EventType_MessageEvent && eventType != scpb.EventType_UserJoinEvent {
+		return
+	}
+
+	if _, ok := con.events[eventType]; !ok {
 		uc := &UserClients{
 			clients: make(map[*Client]bool),
 		}
@@ -89,39 +94,43 @@ func (con *Connection) AddEvent(userId, eventName string, c *Client) {
 			users: make(map[string]*UserClients),
 		}
 		ec.users[userId] = uc
-		con.events[eventName] = ec
-	} else if _, ok := con.events[eventName].users[userId]; !ok {
+		con.events[eventType] = ec
+	} else if _, ok := con.events[eventType].users[userId]; !ok {
 		uc := &UserClients{
 			clients: make(map[*Client]bool),
 		}
 		uc.clients[c] = true
-		con.events[eventName].users[userId] = uc
-	} else if _, ok := con.events[eventName].users[userId].clients[c]; !ok {
-		con.events[eventName].users[userId].clients[c] = true
+		con.events[eventType].users[userId] = uc
+	} else if _, ok := con.events[eventType].users[userId].clients[c]; !ok {
+		con.events[eventType].users[userId].clients[c] = true
 	}
 }
 
-func (con *Connection) RemoveEvent(userId, eventName string, c *Client) {
-	if userId == "" || eventName == "" || c == nil {
+func (con *Connection) RemoveEvent(userId string, eventType scpb.EventType, c *Client) {
+	if userId == "" || c == nil {
 		return
 	}
 
-	if _, ok := con.events[eventName]; !ok {
+	if eventType != scpb.EventType_MessageEvent && eventType != scpb.EventType_UserJoinEvent {
 		return
 	}
 
-	if _, ok := con.events[eventName].users[userId]; !ok {
+	if _, ok := con.events[eventType]; !ok {
 		return
 	}
 
-	if _, ok := con.events[eventName].users[userId].clients[c]; ok {
-		delete(con.events[eventName].users[userId].clients, c)
+	if _, ok := con.events[eventType].users[userId]; !ok {
+		return
 	}
-	if len(con.events[eventName].users[userId].clients) == 0 {
-		delete(con.events[eventName].users, userId)
+
+	if _, ok := con.events[eventType].users[userId].clients[c]; ok {
+		delete(con.events[eventType].users[userId].clients, c)
+	}
+	if len(con.events[eventType].users[userId].clients) == 0 {
+		delete(con.events[eventType].users, userId)
 	}
 	if len(con.events) == 0 {
-		delete(con.events, eventName)
+		delete(con.events, eventType)
 	}
 }
 
@@ -133,7 +142,7 @@ func (conn *Connection) Users() map[string]*UserClients {
 	return conn.users
 }
 
-func (conn *Connection) Events() map[string]*EventClients {
+func (conn *Connection) Events() map[scpb.EventType]*EventClients {
 	return conn.events
 }
 
@@ -145,14 +154,14 @@ func (conn *Connection) EachUserCount() map[string]int {
 	return euc
 }
 
-func (conn *Connection) EachEventCount() map[string]map[string]int {
-	eec := make(map[string]map[string]int, len(conn.events))
-	for eventName, eventClients := range conn.events {
+func (conn *Connection) EachEventCount() map[scpb.EventType]map[string]int {
+	eec := make(map[scpb.EventType]map[string]int, len(conn.events))
+	for event, eventClients := range conn.events {
 		euc := make(map[string]int, len(eventClients.users))
 		for userID, userClients := range eventClients.users {
 			euc[userID] = len(userClients.clients)
 		}
-		eec[eventName] = euc
+		eec[event] = euc
 	}
 	return eec
 }
