@@ -30,10 +30,6 @@
   version = "0.11.4"
 
 [[constraint]]
-  name = "github.com/fatih/structs"
-  version = "1.0.0"
-
-[[constraint]]
   name = "github.com/fukata/golang-stats-api-handler"
   version = "1.0.0"
 
@@ -64,10 +60,6 @@
 [[constraint]]
   branch = "master"
   name = "github.com/swagchat/protobuf"
-
-[[constraint]]
-  name = "go.uber.org/zap"
-  version = "1.9.0"
 
 [[constraint]]
   branch = "master"
