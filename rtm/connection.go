@@ -80,7 +80,7 @@ func (con *Connection) AddEvent(userId string, eventType scpb.EventType, c *Clie
 		return
 	}
 
-	if eventType != scpb.EventType_MessageEvent && eventType != scpb.EventType_UserJoinEvent {
+	if eventType != scpb.EventType_MessageEvent && eventType != scpb.EventType_RoomEvent {
 		return
 	}
 
@@ -111,7 +111,7 @@ func (con *Connection) RemoveEvent(userId string, eventType scpb.EventType, c *C
 		return
 	}
 
-	if eventType != scpb.EventType_MessageEvent && eventType != scpb.EventType_UserJoinEvent {
+	if eventType != scpb.EventType_MessageEvent && eventType != scpb.EventType_RoomEvent {
 		return
 	}
 
