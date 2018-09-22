@@ -12,19 +12,6 @@ import (
 	yaml "gopkg.in/yaml.v2"
 )
 
-const (
-	// AppName is Application name
-	AppName = "rtm-api"
-	// APIVersion is API version
-	APIVersion = "0"
-	// BuildVersion is API build version
-	BuildVersion = "0.3.0"
-
-	CtxSubscription ctxKey = iota
-	CtxTracerTransaction
-	CtxTracerSpan
-)
-
 var (
 	cfg         = NewConfig()
 	showVersion = false
@@ -76,6 +63,12 @@ type Logger struct {
 // Tracer is settings of tracer
 type Tracer struct {
 	Provider string
+
+	Zipkin struct {
+		Endpoint  string
+		BatchSize int
+		Timeout   int
+	}
 }
 
 type Messaging struct {
@@ -258,6 +251,21 @@ func (c *config) loadEnv() {
 	if v = os.Getenv("SWAG_TRACER_PROVIDER"); v != "" {
 		c.Tracer.Provider = v
 	}
+	if v = os.Getenv("SWAG_TRACER_ZIPKIN_ENDPOINT"); v != "" {
+		c.Tracer.Zipkin.Endpoint = v
+	}
+	if v = os.Getenv("SWAG_TRACER_ZIPKIN_BATCHSIZE"); v != "" {
+		batchSize, err := strconv.Atoi(v)
+		if err == nil {
+			c.Tracer.Zipkin.BatchSize = batchSize
+		}
+	}
+	if v = os.Getenv("SWAG_TRACER_ZIPKIN_TIMEOUT"); v != "" {
+		timeout, err := strconv.Atoi(v)
+		if err == nil {
+			c.Tracer.Zipkin.Timeout = timeout
+		}
+	}
 
 	// metrics
 	if v = os.Getenv("RTM_METRICS_PROVIDER"); v != "" {
@@ -369,6 +377,9 @@ func (c *config) parseFlag(args []string) error {
 
 	// Tracer
 	flags.StringVar(&c.Tracer.Provider, "tracer.provider", c.Tracer.Provider, "")
+	flags.StringVar(&c.Tracer.Zipkin.Endpoint, "tracer.zipkin.endpoint", c.Tracer.Zipkin.Endpoint, "")
+	flags.IntVar(&c.Tracer.Zipkin.BatchSize, "tracer.zipkin.batchsize", c.Tracer.Zipkin.BatchSize, "")
+	flags.IntVar(&c.Tracer.Zipkin.Timeout, "tracer.zipkin.timeout", c.Tracer.Zipkin.Timeout, "")
 
 	// metrics
 	flags.StringVar(&c.Metrics.Provider, "metrics.provider", c.Metrics.Provider, "")
@@ -487,6 +498,13 @@ func (c *config) after() error {
 	}
 	if c.Metrics.Interval == 0 {
 		c.Metrics.Interval = 5
+	}
+
+	// Tracer
+	if c.Tracer.Provider == "zipkin" {
+		if c.Tracer.Zipkin.Endpoint == "" {
+			return errors.New("Please set tracer.zipkin.endpoint")
+		}
 	}
 
 	return nil

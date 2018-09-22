@@ -11,6 +11,7 @@ type provider interface {
 	NewTracer() error
 	StartTransaction(name, transactionType string, opts ...StartTransactionOption) (context.Context, interface{})
 	StartSpan(name, spanType string) interface{}
+	InjectHTTPRequest(span interface{}, req *http.Request)
 	SetTag(span interface{}, key string, value interface{})
 	SetHTTPStatusCode(span interface{}, statusCode int)
 	SetError(span interface{}, err error)
@@ -39,6 +40,13 @@ func Provider(ctx context.Context) provider {
 	case "jaeger":
 		p = &jaegerProvider{
 			ctx: ctx,
+		}
+	case "zipkin":
+		p = &jaegerProvider{
+			ctx:       ctx,
+			endpoint:  cfg.Tracer.Zipkin.Endpoint,
+			batchSize: cfg.Tracer.Zipkin.BatchSize,
+			timeout:   cfg.Tracer.Zipkin.Timeout,
 		}
 	case "elasticapm":
 		p = &elasticapmProvider{
