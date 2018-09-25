@@ -3,6 +3,7 @@ package rest
 import (
 	"context"
 	"encoding/json"
+	"expvar"
 	"fmt"
 	"io/ioutil"
 	"net/http"
@@ -49,6 +50,10 @@ func Run(ctx context.Context) {
 	mux.OptionsFunc("/*", optionsHandler)
 	mux.NotFoundFunc(notFoundHandler)
 
+	if cfg.Profiling {
+		mux.GetFunc("/debug/vars", metricsHandler)
+	}
+
 	logger.Info(fmt.Sprintf("Starting %s server[REST] on listen tcp :%s", config.AppName, cfg.HTTPPort))
 	errCh := make(chan error)
 	go func() {
@@ -86,6 +91,29 @@ func (w *customResponseWriter) Write(b []byte) (int, error) {
 
 func indexHandler(w http.ResponseWriter, r *http.Request) {
 	respond(w, r, http.StatusOK, "text/plain", fmt.Sprintf("%s [API Version]%s [Build Version]%s", config.AppName, config.APIVersion, config.BuildVersion))
+}
+
+func metricsHandler(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json; charset=utf-8")
+
+	first := true
+	report := func(key string, value interface{}) {
+		if !first {
+			fmt.Fprintf(w, ",\n")
+		}
+		first = false
+		if str, ok := value.(string); ok {
+			fmt.Fprintf(w, "%q: %q", key, str)
+		} else {
+			fmt.Fprintf(w, "%q: %v", key, value)
+		}
+	}
+
+	fmt.Fprintf(w, "{\n")
+	expvar.Do(func(kv expvar.KeyValue) {
+		report(kv.Key, kv.Value)
+	})
+	fmt.Fprintf(w, "\n}\n")
 }
 
 func traceHandler(fn http.HandlerFunc) http.HandlerFunc {
