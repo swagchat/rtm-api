@@ -1,0 +1,14 @@
+#################################################
+#             RTM API settings                 #
+#################################################
+httpPort: 8102
+profiling: false
+ReadBufferSize:  8192
+WriteBufferSize: 1024
+MaxMessageSize:  8192
+
+logger:
+  enableConsole: true
+  consoleFormat: text # text or json
+  consoleLevel: debug # debug, info, warn, error
+  enableFile: false

@@ -26,20 +26,13 @@ type config struct {
 	Version         string
 	HTTPPort        string `yaml:"httpPort"`
 	Profiling       bool
-	ErrorLogging    bool `yaml:"errorLogging"`
 	ReadBufferSize  int
 	WriteBufferSize int
 	MaxMessageSize  int64
-	Logging         *Logging
 	Logger          *Logger
 	Tracer          *Tracer
 	Metrics         *Metrics
 	SBroker         *SBroker `yaml:"sBroker"`
-}
-
-// Logger is settings of logger
-type Logging struct {
-	Level string
 }
 
 // Logger is settings of logger
@@ -68,25 +61,6 @@ type Tracer struct {
 		Endpoint  string
 		BatchSize int
 		Timeout   int
-	}
-}
-
-type Messaging struct {
-	Provider string
-	NSQ      struct {
-		Port           string
-		NsqlookupdHost string
-		NsqlookupdPort string
-		NsqdHost       string
-		NsqdPort       string
-		Topic          string
-		Channel        string
-	}
-	Kafka struct {
-		Host    string
-		Port    string
-		GroupID string `yaml:"groupId"`
-		Topic   string
 	}
 }
 
@@ -154,19 +128,15 @@ func Config() *config {
 }
 
 func defaultSetting() *config {
-	logging := &Logging{
-		Level: "development",
-	}
-
 	c := &config{
-		Version:         "0",
-		HTTPPort:        "8102",
-		Profiling:       false,
-		ErrorLogging:    false,
+		Version:   "0",
+		HTTPPort:  "8102",
+		Profiling: false,
+		// ErrorLogging:    false,
 		ReadBufferSize:  8192,
 		WriteBufferSize: 1024,
 		MaxMessageSize:  8192,
-		Logging:         logging,
+		// Logging:         logging,
 		Logger: &Logger{
 			EnableConsole: true,
 			ConsoleFormat: "text",
@@ -182,7 +152,10 @@ func defaultSetting() *config {
 }
 
 func (c *config) loadYaml(buf []byte) {
-	yaml.Unmarshal(buf, c)
+	err := yaml.Unmarshal(buf, c)
+	if err != nil {
+		log.Fatalf("Failed to load yaml file. %v", err)
+	}
 }
 
 func (c *config) loadEnv() {
@@ -199,13 +172,6 @@ func (c *config) loadEnv() {
 			c.Profiling = true
 		} else if v == "false" {
 			c.Profiling = false
-		}
-	}
-	if v = os.Getenv("RTM_ERROR_LOGGING"); v != "" {
-		if v == "true" {
-			c.ErrorLogging = true
-		} else if v == "false" {
-			c.ErrorLogging = false
 		}
 	}
 
@@ -359,9 +325,6 @@ func (c *config) parseFlag(args []string) error {
 	var profiling string
 	flags.StringVar(&profiling, "profiling", "", "")
 
-	var errorLogging string
-	flags.StringVar(&errorLogging, "errorLogging", "", "false")
-
 	flag.IntVar(&c.ReadBufferSize, "readBufferSize", c.ReadBufferSize, "")
 	flag.IntVar(&c.WriteBufferSize, "writeBufferSize", c.WriteBufferSize, "")
 	flag.Int64Var(&c.MaxMessageSize, "maxMessageSize", c.MaxMessageSize, "")
@@ -435,16 +398,16 @@ func (c *config) parseFlag(args []string) error {
 		return nil
 	}
 
+	if profiling == "true" {
+		c.Profiling = true
+	}
+
 	if configPath != "" {
 		if !isExists(configPath) {
 			return fmt.Errorf("File not found [%s]", configPath)
 		}
 		buf, _ := ioutil.ReadFile(configPath)
 		c.loadYaml(buf)
-	}
-
-	if profiling == "true" {
-		c.Profiling = true
 	}
 
 	return nil
