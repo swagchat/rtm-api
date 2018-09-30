@@ -1,9 +1,12 @@
 [![MIT License](http://img.shields.io/badge/license-MIT-blue.svg?style=flat)](LICENSE)
 [![Go Report Card](https://goreportcard.com/badge/github.com/swagchat/rtm-api)](https://goreportcard.com/report/github.com/swagchat/rtm-api)
 
-# swagchat Real Time Messaging
+# swagchat rtm-api
 
 swagchat is an open source chat components for your webapps.
+
+rtm-api is designed to be easy to introduce to your microservices as well.
+
 
 ## Architecture
 
@@ -38,21 +41,37 @@ docker run swagchat/rtm-api
 
 [Docker repository](https://hub.docker.com/r/swagchat/rtm-api/)
 
-### heroku
+## Configuration
 
-[![Deploy](https://www.herokucdn.com/deploy/button.svg)](https://heroku.com/deploy)
+### Specify the setting file (yaml format)
 
-### Requirements
-
-#### kafka
-
-##### mac
+To override the default configuration options, make a copy of `defaultConfig.yaml` and then specify that file name in runtime parameter `config` and execute.
 
 ```
-brew install librdkafka
+./rtm-api -config myConfig.yaml
 ```
 
-https://github.com/confluentinc/confluent-kafka-go
+### Specify environment variables
+
+You can overwrite it with environment variable.
+
+```
+export HTTP_PORT=80 && ./rtm-api
+```
+
+### Specify runtime parameters
+
+You can overwrite it with runtime parameters.
+
+```
+./rtm-api -httpPort 80
+```
+
+You can check the variables that can be set with the help command of the executable binary.
+
+```
+./rtm-api -h
+```
 
 ## License
 
