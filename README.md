@@ -7,6 +7,7 @@ swagchat is an open source chat components for your webapps.
 
 rtm-api is designed to be easy to introduce to your microservices as well.
 
+**Currently developing for version 1**
 
 ## Architecture
 
