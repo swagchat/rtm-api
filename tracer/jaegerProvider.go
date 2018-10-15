@@ -7,13 +7,15 @@ import (
 	"net/http"
 	"time"
 
+	logger "github.com/betchi/zapper"
 	opentracing "github.com/opentracing/opentracing-go"
 	"github.com/opentracing/opentracing-go/ext"
-	"github.com/swagchat/rtm-api/config"
-	"github.com/swagchat/rtm-api/logger"
+	"github.com/swagchat/chat-api/config"
 	jaeger "github.com/uber/jaeger-client-go"
 	jaegerConfig "github.com/uber/jaeger-client-go/config"
-	"github.com/uber/jaeger-client-go/transport/zipkin"
+	transportZipkin "github.com/uber/jaeger-client-go/transport/zipkin"
+	"github.com/uber/jaeger-client-go/zipkin"
+	"github.com/uber/jaeger-lib/metrics"
 )
 
 var (
@@ -33,22 +35,22 @@ type jaegerProvider struct {
 func (jp *jaegerProvider) NewTracer() error {
 	var tracer opentracing.Tracer
 	var closer io.Closer
-	var err error
 
 	if jp.endpoint == "" {
 		// jaeger
-		cfg := &jaegerConfig.Configuration{
-			Sampler: &jaegerConfig.SamplerConfig{
-				Type:  "const",
-				Param: 1,
-			},
-			Reporter: &jaegerConfig.ReporterConfig{
-				LogSpans: true,
-			},
+		cfg, err := jaegerConfig.FromEnv()
+		if err != nil {
+			logger.Error(err.Error())
+			return err
 		}
+		zipkinPropagator := zipkin.NewZipkinB3HTTPHeaderPropagator()
 		tracer, closer, err = cfg.New(
 			fmt.Sprintf("%s:%s", config.AppName, config.BuildVersion),
 			jaegerConfig.Logger(jaeger.StdLogger),
+			jaegerConfig.Metrics(metrics.NullFactory),
+			jaegerConfig.Injector(opentracing.HTTPHeaders, zipkinPropagator),
+			jaegerConfig.Extractor(opentracing.HTTPHeaders, zipkinPropagator),
+			jaegerConfig.ZipkinSharedRPCSpan(true),
 		)
 		if err != nil {
 			logger.Error(err.Error())
@@ -56,20 +58,29 @@ func (jp *jaegerProvider) NewTracer() error {
 		}
 	} else {
 		// zipkin
-		transport, err := zipkin.NewHTTPTransport(
+		transport, err := transportZipkin.NewHTTPTransport(
 			jp.endpoint,
-			zipkin.HTTPBatchSize(jp.batchSize),
-			zipkin.HTTPTimeout(time.Second*time.Duration(jp.timeout)),
-			zipkin.HTTPLogger(jaeger.StdLogger),
+			transportZipkin.HTTPBatchSize(jp.batchSize),
+			transportZipkin.HTTPTimeout(time.Second*time.Duration(jp.timeout)),
+			transportZipkin.HTTPLogger(jaeger.StdLogger),
 		)
 		if err != nil {
 			logger.Error(err.Error())
 			return err
 		}
+		zipkinPropagator := zipkin.NewZipkinB3HTTPHeaderPropagator()
+		injector := jaeger.TracerOptions.Injector(opentracing.HTTPHeaders, zipkinPropagator)
+		extractor := jaeger.TracerOptions.Extractor(opentracing.HTTPHeaders, zipkinPropagator)
+		zipkinSharedRPCSpan := jaeger.TracerOptions.ZipkinSharedRPCSpan(true)
+		gen128Bit := jaeger.TracerOptions.Gen128Bit(true)
 		tracer, closer = jaeger.NewTracer(
 			fmt.Sprintf("%s:%s", config.AppName, config.BuildVersion),
 			jaeger.NewConstSampler(true),
 			jaeger.NewRemoteReporter(transport),
+			injector,
+			extractor,
+			zipkinSharedRPCSpan,
+			gen128Bit,
 		)
 		if err != nil {
 			logger.Error(err.Error())
