@@ -4,8 +4,8 @@ import (
 	"encoding/json"
 	"fmt"
 
+	logger "github.com/betchi/zapper"
 	scpb "github.com/swagchat/protobuf/protoc-gen-go"
-	"github.com/swagchat/rtm-api/logger"
 )
 
 var srv = NewServer()

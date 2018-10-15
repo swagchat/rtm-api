@@ -12,9 +12,9 @@ import (
 	"os/signal"
 	"syscall"
 
+	logger "github.com/betchi/zapper"
 	"github.com/kylelemons/godebug/pretty"
 	"github.com/swagchat/rtm-api/config"
-	"github.com/swagchat/rtm-api/logger"
 	"github.com/swagchat/rtm-api/metrics"
 	"github.com/swagchat/rtm-api/rest"
 	"github.com/swagchat/rtm-api/rtm"
@@ -29,7 +29,15 @@ func main() {
 
 	cfg := config.Config()
 
-	logger.InitLogger(cfg.Logger)
+	logger.InitGlobalLogger(&logger.Config{
+		EnableConsole: cfg.Logger.EnableConsole,
+		ConsoleFormat: cfg.Logger.ConsoleFormat,
+		ConsoleLevel:  cfg.Logger.ConsoleLevel,
+		EnableFile:    cfg.Logger.EnableFile,
+		FileFormat:    cfg.Logger.FileFormat,
+		FileLevel:     cfg.Logger.FileLevel,
+		FilePath:      cfg.Logger.FilePath,
+	})
 
 	compact := &pretty.Config{
 		Compact: true,

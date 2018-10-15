@@ -7,11 +7,11 @@ import (
 	"os/signal"
 	"syscall"
 
+	logger "github.com/betchi/zapper"
 	"github.com/confluentinc/confluent-kafka-go/kafka"
 	"github.com/pkg/errors"
 	uuid "github.com/satori/go.uuid"
 	"github.com/swagchat/rtm-api/config"
-	"github.com/swagchat/rtm-api/logger"
 	"github.com/swagchat/rtm-api/rtm"
 	"github.com/swagchat/rtm-api/tracer"
 )

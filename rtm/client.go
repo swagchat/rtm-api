@@ -4,10 +4,10 @@ import (
 	"strings"
 	"time"
 
+	logger "github.com/betchi/zapper"
 	"github.com/gorilla/websocket"
 	scpb "github.com/swagchat/protobuf/protoc-gen-go"
 	"github.com/swagchat/rtm-api/config"
-	"github.com/swagchat/rtm-api/logger"
 )
 
 const (

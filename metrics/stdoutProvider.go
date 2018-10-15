@@ -4,9 +4,9 @@ import (
 	"fmt"
 	"time"
 
+	logger "github.com/betchi/zapper"
 	"github.com/kylelemons/godebug/pretty"
 	"github.com/swagchat/rtm-api/config"
-	"github.com/swagchat/rtm-api/logger"
 )
 
 type stdoutProvider struct{}

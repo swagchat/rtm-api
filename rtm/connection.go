@@ -3,8 +3,8 @@ package rtm
 import (
 	"fmt"
 
+	logger "github.com/betchi/zapper"
 	scpb "github.com/swagchat/protobuf/protoc-gen-go"
-	"github.com/swagchat/rtm-api/logger"
 )
 
 type Connection struct {

@@ -6,16 +6,17 @@ import (
 	"expvar"
 	"fmt"
 	"io/ioutil"
+	"log"
 	"net/http"
 	"net/url"
 	"strings"
 
+	logger "github.com/betchi/zapper"
 	"github.com/fukata/golang-stats-api-handler"
 	"github.com/go-zoo/bone"
 	"github.com/gorilla/websocket"
 	"github.com/shogo82148/go-gracedown"
 	"github.com/swagchat/rtm-api/config"
-	"github.com/swagchat/rtm-api/logger"
 	"github.com/swagchat/rtm-api/rtm"
 	"github.com/swagchat/rtm-api/tracer"
 	"github.com/swagchat/rtm-api/utils"
@@ -44,9 +45,9 @@ func Run(ctx context.Context) {
 	mux := bone.New()
 	mux.GetFunc("/", indexHandler)
 	mux.GetFunc("/stats", stats_api.Handler)
-	mux.GetFunc("/ws", traceHandler(websocketHandler))
-	mux.GetFunc("/speech", traceHandler(speechHandler))
-	mux.PostFunc("/message", traceHandler(messageHandler))
+	mux.GetFunc("/ws", websocketHandler)
+	mux.GetFunc("/speech", commonHandler(speechHandler))
+	mux.PostFunc("/message", commonHandler(messageHandler))
 	mux.OptionsFunc("/*", optionsHandler)
 	mux.NotFoundFunc(notFoundHandler)
 
@@ -91,6 +92,18 @@ func (w *customResponseWriter) Write(b []byte) (int, error) {
 
 func indexHandler(w http.ResponseWriter, r *http.Request) {
 	respond(w, r, http.StatusOK, "text/plain", fmt.Sprintf("%s [API Version]%s [Build Version]%s", config.AppName, config.APIVersion, config.BuildVersion))
+}
+
+func commonHandler(fn http.HandlerFunc) http.HandlerFunc {
+	return (colsHandler(
+		traceHandler(
+			func(w http.ResponseWriter, r *http.Request) {
+				for i, v := range r.Header {
+					log.Printf("%s=%s\n", i, v)
+				}
+				defer r.Body.Close()
+				fn(w, r)
+			})))
 }
 
 func metricsHandler(w http.ResponseWriter, r *http.Request) {

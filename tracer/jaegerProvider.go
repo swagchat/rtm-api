@@ -10,7 +10,7 @@ import (
 	logger "github.com/betchi/zapper"
 	opentracing "github.com/opentracing/opentracing-go"
 	"github.com/opentracing/opentracing-go/ext"
-	"github.com/swagchat/chat-api/config"
+	"github.com/swagchat/rtm-api/config"
 	jaeger "github.com/uber/jaeger-client-go"
 	jaegerConfig "github.com/uber/jaeger-client-go/config"
 	transportZipkin "github.com/uber/jaeger-client-go/transport/zipkin"
