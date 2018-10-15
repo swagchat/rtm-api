@@ -1,4 +1,4 @@
-package sbroker
+package consumer
 
 import (
 	"context"
@@ -23,21 +23,21 @@ type kafkaProvider struct {
 }
 
 func (kp *kafkaProvider) SubscribeMessage() error {
-	span := tracer.Provider(kp.ctx).StartSpan("SubscribeMessage", "sbroker")
+	span := tracer.Provider(kp.ctx).StartSpan("SubscribeMessage", "consumer")
 	defer tracer.Provider(kp.ctx).Finish(span)
 
 	cfg := config.Config()
 
-	host := cfg.SBroker.Kafka.Host
+	host := cfg.Consumer.Kafka.Host
 	if host == "" {
-		err := errors.New("sbroker.kafka.host is empty")
+		err := errors.New("consumer.kafka.host is empty")
 		logger.Error(err.Error())
 		return err
 	}
 
-	port := cfg.SBroker.Kafka.Port
+	port := cfg.Consumer.Kafka.Port
 	if port == "" {
-		err := errors.New("sbroker.kafka.port is empty")
+		err := errors.New("consumer.kafka.port is empty")
 		logger.Error(err.Error())
 		return err
 	}
@@ -61,7 +61,7 @@ func (kp *kafkaProvider) SubscribeMessage() error {
 		return err
 	}
 
-	topic := cfg.SBroker.Kafka.Topic
+	topic := cfg.Consumer.Kafka.Topic
 	err = client.SubscribeTopics([]string{topic}, nil)
 	if err != nil {
 		logger.Error(err.Error())
@@ -104,7 +104,7 @@ func (kp *kafkaProvider) SubscribeMessage() error {
 }
 
 func (kp *kafkaProvider) UnsubscribeMessage() error {
-	span := tracer.Provider(kp.ctx).StartSpan("UnsubscribeMessage", "sbroker")
+	span := tracer.Provider(kp.ctx).StartSpan("UnsubscribeMessage", "consumer")
 	defer tracer.Provider(kp.ctx).Finish(span)
 
 	if client == nil {

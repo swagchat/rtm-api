@@ -15,10 +15,10 @@ import (
 	logger "github.com/betchi/zapper"
 	"github.com/kylelemons/godebug/pretty"
 	"github.com/swagchat/rtm-api/config"
+	"github.com/swagchat/rtm-api/consumer"
 	"github.com/swagchat/rtm-api/metrics"
 	"github.com/swagchat/rtm-api/rest"
 	"github.com/swagchat/rtm-api/rtm"
-	"github.com/swagchat/rtm-api/sbroker"
 	"github.com/swagchat/rtm-api/tracer"
 )
 
@@ -53,7 +53,7 @@ func main() {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	go sbroker.Provider(ctx).SubscribeMessage()
+	go consumer.Provider(ctx).SubscribeMessage()
 
 	err := tracer.Provider(ctx).NewTracer()
 	if err != nil {
