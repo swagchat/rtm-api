@@ -6,12 +6,12 @@ import (
 	"net/http"
 	"os"
 
+	"github.com/betchi/tracer"
 	logger "github.com/betchi/zapper"
 	nsq "github.com/nsqio/go-nsq"
 	"github.com/pkg/errors"
 	"github.com/swagchat/rtm-api/config"
 	"github.com/swagchat/rtm-api/rtm"
-	"github.com/swagchat/rtm-api/tracer"
 )
 
 var NSQConsumer *nsq.Consumer
@@ -21,8 +21,8 @@ type nsqProvider struct {
 }
 
 func (np *nsqProvider) SubscribeMessage() error {
-	span := tracer.Provider(np.ctx).StartSpan("SubscribeMessage", "consumer")
-	defer tracer.Provider(np.ctx).Finish(span)
+	span := tracer.StartSpan(np.ctx, "SubscribeMessage", "consumer")
+	defer tracer.Finish(span)
 
 	c := config.Config()
 	if c.Consumer.NSQ.NsqlookupdHost != "" {
@@ -55,8 +55,8 @@ func (np *nsqProvider) SubscribeMessage() error {
 }
 
 func (np *nsqProvider) UnsubscribeMessage() error {
-	span := tracer.Provider(np.ctx).StartSpan("UnsubscribeMessage", "consumer")
-	defer tracer.Provider(np.ctx).Finish(span)
+	span := tracer.StartSpan(np.ctx, "UnsubscribeMessage", "consumer")
+	defer tracer.Finish(span)
 
 	if NSQConsumer == nil {
 		return nil

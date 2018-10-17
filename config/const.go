@@ -9,6 +9,4 @@ const (
 	BuildVersion = "0.3.0"
 
 	CtxSubscription ctxKey = iota
-	CtxTracerTransaction
-	CtxTracerSpan
 )

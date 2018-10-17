@@ -11,6 +11,7 @@ import (
 	"net/url"
 	"strings"
 
+	"github.com/betchi/tracer"
 	logger "github.com/betchi/zapper"
 	"github.com/fukata/golang-stats-api-handler"
 	"github.com/go-zoo/bone"
@@ -18,7 +19,6 @@ import (
 	"github.com/shogo82148/go-gracedown"
 	"github.com/swagchat/rtm-api/config"
 	"github.com/swagchat/rtm-api/rtm"
-	"github.com/swagchat/rtm-api/tracer"
 	"github.com/swagchat/rtm-api/utils"
 )
 
@@ -131,26 +131,27 @@ func metricsHandler(w http.ResponseWriter, r *http.Request) {
 
 func traceHandler(fn http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		ctx, span := tracer.Provider(r.Context()).StartTransaction(
+		ctx, span := tracer.StartTransaction(
+			r.Context(),
 			fmt.Sprintf("%s:%s", r.Method, r.RequestURI), "REST",
 			tracer.StartTransactionOptionWithHTTPRequest(r),
 		)
-		defer tracer.Provider(ctx).CloseTransaction()
+		defer tracer.CloseTransaction(ctx)
 
 		sw := &customResponseWriter{ResponseWriter: w}
 		fn(sw, r.WithContext(ctx))
 
-		tracer.Provider(ctx).SetHTTPStatusCode(span, sw.status)
-		tracer.Provider(ctx).SetTag(span, "http.method", r.Method)
-		tracer.Provider(ctx).SetTag(span, "http.content_length", sw.length)
-		tracer.Provider(ctx).SetTag(span, "http.referer", r.Referer())
+		tracer.SetHTTPStatusCode(span, sw.status)
+		tracer.SetTag(span, "http.method", r.Method)
+		tracer.SetTag(span, "http.content_length", sw.length)
+		tracer.SetTag(span, "http.referer", r.Referer())
 	}
 }
 
 func messageHandler(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
-	span := tracer.Provider(ctx).StartSpan("messageHandler", "rest")
-	defer tracer.Provider(ctx).Finish(span)
+	span := tracer.StartSpan(ctx, "messageHandler", "rest")
+	defer tracer.Finish(span)
 
 	message, err := ioutil.ReadAll(r.Body)
 	if err != nil {
@@ -161,12 +162,12 @@ func messageHandler(w http.ResponseWriter, r *http.Request) {
 
 func websocketHandler(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
-	span := tracer.Provider(ctx).StartSpan("websocketHandler", "rest")
-	defer tracer.Provider(ctx).Finish(span)
+	span := tracer.StartSpan(ctx, "websocketHandler", "rest")
+	defer tracer.Finish(span)
 
 	conn, err := upgrader.Upgrade(w, r, nil)
 	if err != nil {
-		tracer.Provider(ctx).SetError(span, err)
+		tracer.SetError(span, err)
 		logger.Error(err.Error())
 		return
 	}

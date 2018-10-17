@@ -12,14 +12,16 @@ import (
 	"os/signal"
 	"syscall"
 
+	"github.com/betchi/tracer"
 	logger "github.com/betchi/zapper"
+	elasticapmLogger "github.com/betchi/zapper/elasticapm"
+	jaegerLogger "github.com/betchi/zapper/jaeger"
 	"github.com/kylelemons/godebug/pretty"
 	"github.com/swagchat/rtm-api/config"
 	"github.com/swagchat/rtm-api/consumer"
 	"github.com/swagchat/rtm-api/metrics"
 	"github.com/swagchat/rtm-api/rest"
 	"github.com/swagchat/rtm-api/rtm"
-	"github.com/swagchat/rtm-api/tracer"
 )
 
 func main() {
@@ -30,13 +32,18 @@ func main() {
 	cfg := config.Config()
 
 	logger.InitGlobalLogger(&logger.Config{
-		EnableConsole: cfg.Logger.EnableConsole,
-		ConsoleFormat: cfg.Logger.ConsoleFormat,
-		ConsoleLevel:  cfg.Logger.ConsoleLevel,
-		EnableFile:    cfg.Logger.EnableFile,
-		FileFormat:    cfg.Logger.FileFormat,
-		FileLevel:     cfg.Logger.FileLevel,
-		FilePath:      cfg.Logger.FilePath,
+		EnableConsole:  cfg.Logger.EnableConsole,
+		ConsoleFormat:  cfg.Logger.ConsoleFormat,
+		ConsoleLevel:   cfg.Logger.ConsoleLevel,
+		EnableFile:     cfg.Logger.EnableFile,
+		FileFormat:     cfg.Logger.FileFormat,
+		FileLevel:      cfg.Logger.FileLevel,
+		FilePath:       cfg.Logger.FilePath,
+		FileMaxSize:    cfg.Logger.FileMaxSize,
+		FileMaxAge:     cfg.Logger.FileMaxAge,
+		FileMaxBackups: cfg.Logger.FileMaxBackups,
+		FileLocalTime:  cfg.Logger.FileLocalTime,
+		FileCompress:   cfg.Logger.FileCompress,
 	})
 
 	compact := &pretty.Config{
@@ -55,12 +62,29 @@ func main() {
 
 	go consumer.Provider(ctx).SubscribeMessage()
 
-	err := tracer.Provider(ctx).NewTracer()
+	jaegerLogger.InitGlobalLogger(&jaegerLogger.Config{Noop: !cfg.Tracer.Logging})
+	elasticapmLogger.InitGlobalLogger(&elasticapmLogger.Config{Noop: !cfg.Tracer.Logging})
+	err := tracer.InitGlobalTracer(&tracer.Config{
+		Provider:       cfg.Tracer.Provider,
+		ServiceName:    config.AppName,
+		ServiceVersion: config.BuildVersion,
+		Jaeger: &tracer.Jaeger{
+			Logger: jaegerLogger.GlobalLogger(),
+		},
+		Zipkin: &tracer.Zipkin{
+			Logger:    jaegerLogger.GlobalLogger(),
+			Endpoint:  cfg.Tracer.Zipkin.Endpoint,
+			BatchSize: cfg.Tracer.Zipkin.BatchSize,
+			Timeout:   cfg.Tracer.Zipkin.Timeout,
+		},
+		ElasticAPM: &tracer.ElasticAPM{
+			Logger: elasticapmLogger.GlobalLogger(),
+		},
+	})
 	if err != nil {
-		logger.Error(err.Error())
-		os.Exit(1)
+		logger.Fatal(err.Error())
 	}
-	defer tracer.Provider(ctx).Close()
+	defer tracer.Close()
 
 	sigChan := make(chan os.Signal)
 	signal.Notify(sigChan, syscall.SIGTERM, syscall.SIGINT, syscall.SIGQUIT, syscall.SIGTSTP, syscall.SIGKILL, syscall.SIGSTOP)
