@@ -6,7 +6,6 @@ import (
 	"expvar"
 	"fmt"
 	"io/ioutil"
-	"log"
 	"net/http"
 	"net/url"
 	"strings"
@@ -98,9 +97,6 @@ func commonHandler(fn http.HandlerFunc) http.HandlerFunc {
 	return (colsHandler(
 		traceHandler(
 			func(w http.ResponseWriter, r *http.Request) {
-				for i, v := range r.Header {
-					log.Printf("%s=%s\n", i, v)
-				}
 				defer r.Body.Close()
 				fn(w, r)
 			})))
