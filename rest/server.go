@@ -69,33 +69,13 @@ func Run(ctx context.Context) {
 	}
 }
 
-type customResponseWriter struct {
-	http.ResponseWriter
-	status int
-	length int
-}
-
-func (w *customResponseWriter) WriteHeader(status int) {
-	w.status = status
-	w.ResponseWriter.WriteHeader(status)
-}
-
-func (w *customResponseWriter) Write(b []byte) (int, error) {
-	if w.status == 0 {
-		w.status = 200
-	}
-	n, err := w.ResponseWriter.Write(b)
-	w.length += n
-	return n, err
-}
-
 func indexHandler(w http.ResponseWriter, r *http.Request) {
 	respond(w, r, http.StatusOK, "text/plain", fmt.Sprintf("%s [API Version]%s [Build Version]%s", config.AppName, config.APIVersion, config.BuildVersion))
 }
 
 func commonHandler(fn http.HandlerFunc) http.HandlerFunc {
 	return (colsHandler(
-		traceHandler(
+		tracer.HandlerFunc(
 			func(w http.ResponseWriter, r *http.Request) {
 				defer r.Body.Close()
 				fn(w, r)
@@ -123,25 +103,6 @@ func metricsHandler(w http.ResponseWriter, r *http.Request) {
 		report(kv.Key, kv.Value)
 	})
 	fmt.Fprintf(w, "\n}\n")
-}
-
-func traceHandler(fn http.HandlerFunc) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		ctx, span := tracer.StartTransaction(
-			r.Context(),
-			fmt.Sprintf("%s:%s", r.Method, r.RequestURI), "REST",
-			tracer.StartTransactionOptionWithHTTPRequest(r),
-		)
-		defer tracer.CloseTransaction(ctx)
-
-		sw := &customResponseWriter{ResponseWriter: w}
-		fn(sw, r.WithContext(ctx))
-
-		tracer.SetHTTPStatusCode(span, sw.status)
-		tracer.SetTag(span, "http.method", r.Method)
-		tracer.SetTag(span, "http.content_length", sw.length)
-		tracer.SetTag(span, "http.referer", r.Referer())
-	}
 }
 
 func messageHandler(w http.ResponseWriter, r *http.Request) {
