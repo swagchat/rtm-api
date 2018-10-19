@@ -11,7 +11,9 @@ import (
 	"os"
 	"os/signal"
 	"syscall"
+	"time"
 
+	"github.com/betchi/metrictor"
 	"github.com/betchi/tracer"
 	logger "github.com/betchi/zapper"
 	elasticapmLogger "github.com/betchi/zapper/elasticapm"
@@ -19,7 +21,6 @@ import (
 	"github.com/kylelemons/godebug/pretty"
 	"github.com/swagchat/rtm-api/config"
 	"github.com/swagchat/rtm-api/consumer"
-	"github.com/swagchat/rtm-api/metrics"
 	"github.com/swagchat/rtm-api/rest"
 	"github.com/swagchat/rtm-api/rtm"
 )
@@ -51,14 +52,27 @@ func main() {
 	}
 	logger.Info(fmt.Sprintf("Config: %s", compact.Sprint(cfg)))
 
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
 	if cfg.Profiling {
 		go func() {
 			http.ListenAndServe("0.0.0.0:6060", nil)
 		}()
+		metrictor.SetInt(metrictor.EachTime, "allConns", func() int64 {
+			srv := rtm.Server()
+			return int64(srv.Connection.ConnectionCount())
+		})
+		metrictor.SetInt(metrictor.EachTime, "userCount", func() int64 {
+			srv := rtm.Server()
+			return int64(len(srv.Connection.Users()))
+		})
+		metrictor.SetInt(metrictor.EachTime, "eventCount", func() int64 {
+			srv := rtm.Server()
+			return int64(len(srv.Connection.Events()))
+		})
+		metrictor.Run(ctx, time.Second*5)
 	}
-
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
 
 	go consumer.Provider(ctx).SubscribeMessage()
 
@@ -93,7 +107,6 @@ func main() {
 		cancel()
 	}()
 
-	go metrics.Provider().Run()
 	go rtm.Server().Run()
 
 	rest.Run(ctx)

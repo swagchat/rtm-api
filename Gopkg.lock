@@ -25,6 +25,14 @@
 
 [[projects]]
   branch = "master"
+  digest = "1:c68a37016cf29832baffe4c2ac64e4ad5f3aff987b6595374966486b791baad5"
+  name = "github.com/betchi/metrictor"
+  packages = ["."]
+  pruneopts = ""
+  revision = "e86584d88eb840a5be44d853302a7b547b630c12"
+
+[[projects]]
+  branch = "master"
   digest = "1:11319f092cf2815e99cc11739fc1f1bf09994dc5f4bd402df8d0de27b7fb856f"
   name = "github.com/betchi/tracer"
   packages = ["."]
@@ -207,37 +215,12 @@
   revision = "d65d576e9348f5982d7f6d83682b694e731a45c6"
 
 [[projects]]
-  branch = "master"
-  digest = "1:e977ed7b0619844e394c4e725d008ade0840f1882c500a66e797b98bde70cf87"
-  name = "github.com/mailru/easyjson"
-  packages = [
-    ".",
-    "buffer",
-    "jlexer",
-    "jwriter",
-  ]
-  pruneopts = ""
-  revision = "03f2033d19d5860aef995fe360ac7d395cd8ce65"
-
-[[projects]]
   digest = "1:7a69f6a3a33929f8b66aa39c93868ad1698f06417fe627ae067559beb94504bd"
   name = "github.com/nsqio/go-nsq"
   packages = ["."]
   pruneopts = ""
   revision = "eee57a3ac4174c55924125bb15eeeda8cffb6e6f"
   version = "v1.0.7"
-
-[[projects]]
-  digest = "1:d5bb54177eba61e1aa7ffbe5dab35b773f6402f0ec5463793897a3cbffa33ecf"
-  name = "github.com/olivere/elastic"
-  packages = [
-    ".",
-    "config",
-    "uritemplates",
-  ]
-  pruneopts = ""
-  revision = "e3492b022a109ac0e52a6d42d5bfb835050fa7f4"
-  version = "v6.1.27"
 
 [[projects]]
   digest = "1:78fb99d6011c2ae6c72f3293a83951311147b12b06a5ffa43abf750c4fab6ac5"
@@ -580,6 +563,7 @@
   analyzer-version = 1
   input-imports = [
     "cloud.google.com/go/speech/apiv1",
+    "github.com/betchi/metrictor",
     "github.com/betchi/tracer",
     "github.com/betchi/zapper",
     "github.com/betchi/zapper/elasticapm",
@@ -590,7 +574,6 @@
     "github.com/gorilla/websocket",
     "github.com/kylelemons/godebug/pretty",
     "github.com/nsqio/go-nsq",
-    "github.com/olivere/elastic",
     "github.com/pkg/errors",
     "github.com/satori/go.uuid",
     "github.com/shogo82148/go-gracedown",
